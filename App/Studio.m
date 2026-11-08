@@ -445,7 +445,7 @@ static NSString *BuildDate(NSDate *date){if(!date)return @"暂无记录";NSDateF
 }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{return 2;}
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{return section==0?self.summary.count:self.files.count;}
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{return section==0?DXLoc(@"本次构建"):DXLoc(@"产物与构建记录");}}
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{return section==0?DXLoc(@"本次构建"):DXLoc(@"产物与构建记录");}
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section{return section==1?(self.files.count?@"显示产物、日志、报告及修改时间。文本可打开阅读，长按文件可分享；清理构建缓存会同时移除这些结果。":@"完成构建后，这里会列出产物、日志和报告。"):nil;}
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
  UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];cell.textLabel.font=[UIFont systemFontOfSize:14 weight:UIFontWeightMedium];cell.detailTextLabel.font=[UIFont systemFontOfSize:12];cell.detailTextLabel.numberOfLines=0;
