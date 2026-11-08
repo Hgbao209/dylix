@@ -124,22 +124,24 @@ info = {
     'CFBundleSupportedPlatforms': ['iPhoneSimulator' if args.simulator else 'iPhoneOS'],
 }
 icon_info = ROOT / 'build' / platform / 'icons-info.plist'
-asset_result = subprocess.run(['xcrun', '--sdk', sdk, 'actool', '--compile', str(app), '--platform', sdk,
-                '--sdk', str(installed_sdk),
+subprocess.run(['xcrun', 'actool', '--compile', str(app), '--platform', sdk,
                 '--minimum-deployment-target', '15.0', '--app-icon', 'AppIcon',
                 '--target-device', 'iphone', '--target-device', 'ipad',
                 '--output-partial-info-plist', str(icon_info),
-                str(ROOT / 'Resources/Assets.xcassets')])
-if not icon_info.exists():
-    previous_ipa = ROOT / 'build' / f"Dylix-1.0.5-build141-unsigned.ipa"
-    if previous_ipa.exists():
-        with zipfile.ZipFile(previous_ipa) as previous:
-            (app / 'Assets.car').write_bytes(previous.read('Payload/TheosMobileCompiler.app/Assets.car'))
-        print('actool failed; reused unchanged Assets.car from the previous IPA', flush=True)
-    else:
-        raise SystemExit('Asset catalog compilation failed and icon_info does not exist')
+                str(ROOT / 'Resources/Assets.xcassets')], check=False)
 if icon_info.exists():
     info.update(plistlib.loads(icon_info.read_bytes()))
+else:
+    icon_set = ROOT / 'Resources/Assets.xcassets/AppIcon.appiconset'
+    for src, dst in [('iphone-60-2.png', 'AppIcon60x60@2x.png'),
+                     ('iphone-60-3.png', 'AppIcon60x60@3x.png'),
+                     ('ipad-76-2.png', 'AppIcon76x76@2x~ipad.png')]:
+        if (icon_set / src).exists():
+            shutil.copyfile(icon_set / src, app / dst)
+    info.update({
+        'CFBundleIcons': {'CFBundlePrimaryIcon': {'CFBundleIconFiles': ['AppIcon60x60'], 'CFBundleIconName': 'AppIcon'}},
+        'CFBundleIcons~ipad': {'CFBundlePrimaryIcon': {'CFBundleIconFiles': ['AppIcon60x60', 'AppIcon76x76'], 'CFBundleIconName': 'AppIcon'}}
+    })
 (app / 'Info.plist').write_bytes(plistlib.dumps(info))
 if args.simulator:
     # Disposable ARM64 fixture is data only, used by offline AI tool regression.
