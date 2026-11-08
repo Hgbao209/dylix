@@ -1,4 +1,5 @@
 #import "OutputNaming.h"
+#import "DylixI18n.h"
 #import "DebPackage.h"
 
 NSString *TMCDefaultOutputPattern(NSString *extension){return [extension isEqual:@"deb"]?@"{name}_{version}_{platform}-{packageArch}":@"{name}";}
@@ -14,13 +15,13 @@ NSDictionary<NSString *,NSString *> *TMCOutputContext(NSString *root,NSString *p
 }
 static NSString *InvalidOutput(NSError **error,NSString *message){if(error)*error=[NSError errorWithDomain:@"OutputNaming" code:1 userInfo:@{NSLocalizedDescriptionKey:message}];return nil;}
 NSString *TMCOutputFilename(NSString *pattern,NSString *extension,NSDictionary<NSString *,NSString *> *context,NSError **error){
- if(![pattern isKindOfClass:NSString.class]||!pattern.length)return InvalidOutput(error,@"文件名模板不能为空");
+ if(![pattern isKindOfClass:NSString.class]||!pattern.length)return InvalidOutput(error,DXLoc(@"文件名模板不能为空"));
  NSMutableString *name=[pattern mutableCopy];NSRegularExpression *regex=[NSRegularExpression regularExpressionWithPattern:@"\\{([^{}]+)\\}" options:0 error:nil];NSArray *matches=[regex matchesInString:pattern options:0 range:NSMakeRange(0,pattern.length)];
  NSCharacterSet *bad=[[NSCharacterSet characterSetWithCharactersInString:@"/\\:"] mutableCopy];NSMutableCharacterSet *unsafe=[bad mutableCopy];[unsafe formUnionWithCharacterSet:NSCharacterSet.controlCharacterSet];
  for(NSTextCheckingResult *match in matches.reverseObjectEnumerator){NSString *key=[pattern substringWithRange:[match rangeAtIndex:1]],*value=context[key];if(!value)return InvalidOutput(error,[@"未知模板参数：" stringByAppendingString:key]);value=[[value componentsSeparatedByCharactersInSet:unsafe] componentsJoinedByString:@"_"];[name replaceCharactersInRange:match.range withString:value];}
- if([name rangeOfCharacterFromSet:unsafe].location!=NSNotFound||[name containsString:@"{"]||[name containsString:@"}"])return InvalidOutput(error,@"文件名模板含路径字符、控制符或未配对的大括号");
+ if([name rangeOfCharacterFromSet:unsafe].location!=NSNotFound||[name containsString:@"{"]||[name containsString:@"}"])return InvalidOutput(error,DXLoc(@"文件名模板含路径字符、控制符或未配对的大括号"));
  NSString *base=[name stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];NSString *suffix=[@"." stringByAppendingString:extension];if([base.lowercaseString hasSuffix:suffix])base=[base substringToIndex:base.length-suffix.length];
- if(!base.length||[base hasPrefix:@"."]||[base lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>180)return InvalidOutput(error,@"文件名应为可见名称，且展开后不超过180个UTF-8字节");
+ if(!base.length||[base hasPrefix:@"."]||[base lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>180)return InvalidOutput(error,DXLoc(@"文件名应为可见名称，且展开后不超过180个UTF-8字节"));
  return [base stringByAppendingPathExtension:extension];
 }
 
@@ -39,5 +40,5 @@ NSDictionary *TMCEffectiveBuildOptions(NSDictionary *config,NSUserDefaults *defa
 
 NSDictionary *TMCNamingContextForScheme(NSDictionary *context,NSString *scheme){NSMutableDictionary *c=[context mutableCopy];c[@"platform"]=@"iphoneos";c[@"packageArch"]=[scheme isEqual:@"rootful"]?@"arm":[scheme isEqual:@"roothide"]?@"arm64e":@"arm64";c[@"scheme"]=scheme;c[@"architecture"]=[NSString stringWithFormat:@"%@-%@",c[@"platform"],c[@"packageArch"]];return c;}
 NSString *TMCVariantOutputFilename(NSString *pattern,NSString *extension,NSDictionary *context,NSArray *schemes,NSString *scheme,NSError **error){
- NSMutableSet *used=[NSMutableSet new];for(NSString *item in schemes){NSString *base=TMCOutputFilename(pattern,extension,TMCNamingContextForScheme(context,item),error);if(!base)return nil;NSString *name=base;NSUInteger number=2;while([used containsObject:name.lowercaseString]){name=[[base.stringByDeletingPathExtension stringByAppendingFormat:@"-%lu",(unsigned long)number++] stringByAppendingPathExtension:extension];}if([name lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>190)return InvalidOutput(error,@"重名编号后的文件名过长");[used addObject:name.lowercaseString];if([item isEqual:scheme])return name;}return InvalidOutput(error,@"构建包类型未包含当前目标");
+ NSMutableSet *used=[NSMutableSet new];for(NSString *item in schemes){NSString *base=TMCOutputFilename(pattern,extension,TMCNamingContextForScheme(context,item),error);if(!base)return nil;NSString *name=base;NSUInteger number=2;while([used containsObject:name.lowercaseString]){name=[[base.stringByDeletingPathExtension stringByAppendingFormat:@"-%lu",(unsigned long)number++] stringByAppendingPathExtension:extension];}if([name lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>190)return InvalidOutput(error,DXLoc(@"重名编号后的文件名过长"));[used addObject:name.lowercaseString];if([item isEqual:scheme])return name;}return InvalidOutput(error,DXLoc(@"构建包类型未包含当前目标"));
 }

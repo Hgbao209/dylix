@@ -1,9 +1,10 @@
 #import "TFAIPolicy.h"
+#import "../../DylixI18n.h"
 #import <CommonCrypto/CommonDigest.h>
 #import <sys/stat.h>
-NSError *TFAIToolError(NSString *message){return [NSError errorWithDomain:@"TweakForge.AI.Tools" code:1 userInfo:@{NSLocalizedDescriptionKey:message?:@"AI 工具操作失败"}];}
+NSError *TFAIToolError(NSString *message){return [NSError errorWithDomain:@"TweakForge.AI.Tools" code:1 userInfo:@{NSLocalizedDescriptionKey:message?:DXLoc(@"AI 工具操作失败")}];}
 NSString *TFAIDigest(NSData *data){if(!data)return @"missing";unsigned char bytes[CC_SHA256_DIGEST_LENGTH];CC_SHA256(data.bytes,(CC_LONG)data.length,bytes);NSMutableString *s=[NSMutableString new];for(int i=0;i<CC_SHA256_DIGEST_LENGTH;i++)[s appendFormat:@"%02x",bytes[i]];return s;}
-NSData *TFAIJSON(id value,NSError **error){if(![NSJSONSerialization isValidJSONObject:value]){if(error)*error=TFAIToolError(@"工具数据应为有效 JSON 对象");return nil;}return [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingSortedKeys error:error];}
+NSData *TFAIJSON(id value,NSError **error){if(![NSJSONSerialization isValidJSONObject:value]){if(error)*error=TFAIToolError(DXLoc(@"工具数据应为有效 JSON 对象"));return nil;}return [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingSortedKeys error:error];}
 BOOL TFAIAllowedRelativePath(NSString *path){
  if(![path isKindOfClass:NSString.class]||!path.length||path.isAbsolutePath||[path containsString:@"\\"]||[path containsString:@":"]||[path rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound)return NO;
  NSSet *blocked=[NSSet setWithArray:@[@".git",@".theos",@"build",@".build",@"deriveddata",@"packages",@"node_modules",@".package-link-cache",@".studiotrash",@"__macosx",@"credentials",@"credentials.json",@"secrets",@"secrets.json",@"token",@"token.json",@"tokens.json",@"apikey",@"apikey.json",@"api_key",@"api_key.json",@"auth.json",@".git-credentials",@".netrc",@".ssh",@".aws",@".ds_store"]];
@@ -11,11 +12,11 @@ BOOL TFAIAllowedRelativePath(NSString *path){
  return ![@[@"p12",@"pfx",@"pem",@"key",@"cer",@"mobileprovision",@"o",@"dylib",@"deb",@"ipa",@"tmp",@"swp"] containsObject:path.pathExtension.lowercaseString];
 }
 NSString *TFAISafePath(NSString *root,NSString *relative,BOOL allowDirectory,NSError **error){
- if(!TFAIAllowedRelativePath(relative)){if(error)*error=TFAIToolError(@"路径越界、凭据或构建缓存不在 AI 工具允许范围内");return nil;}
+ if(!TFAIAllowedRelativePath(relative)){if(error)*error=TFAIToolError(DXLoc(@"路径越界、凭据或构建缓存不在 AI 工具允许范围内"));return nil;}
  NSString *base=root.stringByResolvingSymlinksInPath.stringByStandardizingPath;NSString *full=[base stringByAppendingPathComponent:relative].stringByStandardizingPath;
- if(![full hasPrefix:[base stringByAppendingString:@"/"]]){if(error)*error=TFAIToolError(@"路径须位于当前项目内");return nil;}
+ if(![full hasPrefix:[base stringByAppendingString:@"/"]]){if(error)*error=TFAIToolError(DXLoc(@"路径须位于当前项目内"));return nil;}
  NSString *walk=base;NSArray *parts=[relative pathComponents];
- for(NSUInteger i=0;i<parts.count;i++) {walk=[walk stringByAppendingPathComponent:parts[i]];struct stat st;if(lstat(walk.fileSystemRepresentation,&st)==0){if(S_ISLNK(st.st_mode)||(!S_ISREG(st.st_mode)&&!S_ISDIR(st.st_mode))||((i+1<parts.count||allowDirectory)&&!S_ISDIR(st.st_mode)&&i+1<parts.count)){if(error)*error=TFAIToolError(@"AI 工具不跟随符号链接或特殊文件");return nil;}if(i+1==parts.count&&!allowDirectory&&S_ISDIR(st.st_mode)){if(error)*error=TFAIToolError(@"此操作只接受普通文件");return nil;}}}
+ for(NSUInteger i=0;i<parts.count;i++) {walk=[walk stringByAppendingPathComponent:parts[i]];struct stat st;if(lstat(walk.fileSystemRepresentation,&st)==0){if(S_ISLNK(st.st_mode)||(!S_ISREG(st.st_mode)&&!S_ISDIR(st.st_mode))||((i+1<parts.count||allowDirectory)&&!S_ISDIR(st.st_mode)&&i+1<parts.count)){if(error)*error=TFAIToolError(DXLoc(@"AI 工具不跟随符号链接或特殊文件"));return nil;}if(i+1==parts.count&&!allowDirectory&&S_ISDIR(st.st_mode)){if(error)*error=TFAIToolError(DXLoc(@"此操作只接受普通文件"));return nil;}}}
  return full;
 }
 NSString *TFAIPrivateDirectory(NSString *projectID,NSString *sessionID){NSString *base=NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory,NSUserDomainMask,YES).firstObject;NSString *project=TFAIDigest([projectID dataUsingEncoding:NSUTF8StringEncoding]),*session=TFAIDigest([sessionID dataUsingEncoding:NSUTF8StringEncoding]);return [[[base stringByAppendingPathComponent:@"TweakForgeAI/Tools"] stringByAppendingPathComponent:project] stringByAppendingPathComponent:session];}

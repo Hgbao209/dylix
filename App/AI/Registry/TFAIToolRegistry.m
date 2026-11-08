@@ -1,4 +1,5 @@
 #import "TFAIToolRegistry.h"
+#import "../../DylixI18n.h"
 #import <math.h>
 
 static NSDictionary *Declarations(void){
@@ -78,35 +79,35 @@ static BOOL Invalid(NSDictionary **issue,NSString *path,NSString *rule,NSString 
  if(issue)*issue=@{@"parameter":path?:@"arguments",@"rule":rule,@"message":message};return NO;
 }
 static BOOL Validate(id value,NSDictionary *s,NSUInteger depth,NSString *path,NSDictionary **issue){
- if(depth>16)return Invalid(issue,path,@"depth",@"参数嵌套层级超过上限 16");
+ if(depth>16)return Invalid(issue,path,@"depth",DXLoc(@"参数嵌套层级超过上限 16"));
  if(![s isKindOfClass:NSDictionary.class])return YES;
  NSString *type=[s[@"type"] isKindOfClass:NSString.class]?s[@"type"]:nil;
- if([s[@"enum"] isKindOfClass:NSArray.class]&&![s[@"enum"] containsObject:value])return Invalid(issue,path,@"enum",@"必须使用本轮工具声明中的可选值或已下发 ID");
+ if([s[@"enum"] isKindOfClass:NSArray.class]&&![s[@"enum"] containsObject:value])return Invalid(issue,path,@"enum",DXLoc(@"必须使用本轮工具声明中的可选值或已下发 ID"));
  BOOL number=[value isKindOfClass:NSNumber.class],boolean=number&&CFGetTypeID((__bridge CFTypeRef)value)==CFBooleanGetTypeID();
  if([type isEqual:@"string"]){
-  if(![value isKindOfClass:NSString.class])return Invalid(issue,path,@"type",@"必须是字符串");
-  if(s[@"minLength"]&&[value length]<[s[@"minLength"] unsignedIntegerValue])return Invalid(issue,path,@"minLength",[NSString stringWithFormat:@"长度不得少于 %@ 个 UTF-16 单位",s[@"minLength"]]);
-  if(s[@"maxLength"]&&[value length]>[s[@"maxLength"] unsignedIntegerValue])return Invalid(issue,path,@"maxLength",[NSString stringWithFormat:@"长度不得超过 %@ 个 UTF-16 单位",s[@"maxLength"]]);
+  if(![value isKindOfClass:NSString.class])return Invalid(issue,path,@"type",DXLoc(@"必须是字符串"));
+  if(s[@"minLength"]&&[value length]<[s[@"minLength"] unsignedIntegerValue])return Invalid(issue,path,@"minLength",[NSString stringWithFormat:DXLoc(@"长度不得少于 %@ 个 UTF-16 单位"),s[@"minLength"]]);
+  if(s[@"maxLength"]&&[value length]>[s[@"maxLength"] unsignedIntegerValue])return Invalid(issue,path,@"maxLength",[NSString stringWithFormat:DXLoc(@"长度不得超过 %@ 个 UTF-16 单位"),s[@"maxLength"]]);
  }else if([type isEqual:@"boolean"]){
-  if(!boolean)return Invalid(issue,path,@"type",@"必须是布尔值");
+  if(!boolean)return Invalid(issue,path,@"type",DXLoc(@"必须是布尔值"));
  }else if([type isEqual:@"number"]||[type isEqual:@"integer"]){
-  if(!number||boolean||!isfinite([value doubleValue])||([type isEqual:@"integer"]&&floor([value doubleValue])!=[value doubleValue]))return Invalid(issue,path,@"type",[type isEqual:@"integer"]?@"必须是整数，不能使用布尔值或小数":@"必须是有限数值，不能使用布尔值");
-  if(s[@"minimum"]&&[value doubleValue]<[s[@"minimum"] doubleValue])return Invalid(issue,path,@"minimum",[NSString stringWithFormat:@"必须大于或等于 %@",s[@"minimum"]]);
-  if(s[@"maximum"]&&[value doubleValue]>[s[@"maximum"] doubleValue])return Invalid(issue,path,@"maximum",[NSString stringWithFormat:@"必须小于或等于 %@",s[@"maximum"]]);
+  if(!number||boolean||!isfinite([value doubleValue])||([type isEqual:@"integer"]&&floor([value doubleValue])!=[value doubleValue]))return Invalid(issue,path,@"type",[type isEqual:@"integer"]?@"必须是整数，不能使用布尔值或小数":DXLoc(@"必须是有限数值，不能使用布尔值"));
+  if(s[@"minimum"]&&[value doubleValue]<[s[@"minimum"] doubleValue])return Invalid(issue,path,@"minimum",[NSString stringWithFormat:DXLoc(@"必须大于或等于 %@"),s[@"minimum"]]);
+  if(s[@"maximum"]&&[value doubleValue]>[s[@"maximum"] doubleValue])return Invalid(issue,path,@"maximum",[NSString stringWithFormat:DXLoc(@"必须小于或等于 %@"),s[@"maximum"]]);
  }else if([type isEqual:@"array"]){
-  if(![value isKindOfClass:NSArray.class])return Invalid(issue,path,@"type",@"必须是数组");
-  if(s[@"minItems"]&&[value count]<[s[@"minItems"] unsignedIntegerValue])return Invalid(issue,path,@"minItems",[NSString stringWithFormat:@"至少需要 %@ 项",s[@"minItems"]]);
-  if(s[@"maxItems"]&&[value count]>[s[@"maxItems"] unsignedIntegerValue])return Invalid(issue,path,@"maxItems",[NSString stringWithFormat:@"最多允许 %@ 项",s[@"maxItems"]]);
+  if(![value isKindOfClass:NSArray.class])return Invalid(issue,path,@"type",DXLoc(@"必须是数组"));
+  if(s[@"minItems"]&&[value count]<[s[@"minItems"] unsignedIntegerValue])return Invalid(issue,path,@"minItems",[NSString stringWithFormat:DXLoc(@"至少需要 %@ 项"),s[@"minItems"]]);
+  if(s[@"maxItems"]&&[value count]>[s[@"maxItems"] unsignedIntegerValue])return Invalid(issue,path,@"maxItems",[NSString stringWithFormat:DXLoc(@"最多允许 %@ 项"),s[@"maxItems"]]);
   NSUInteger index=0;for(id item in value){if(!Validate(item,s[@"items"],depth+1,[path stringByAppendingFormat:@"[%lu]",(unsigned long)index],issue))return NO;index++;}
  }else if([type isEqual:@"object"]){
-  if(![value isKindOfClass:NSDictionary.class])return Invalid(issue,path,@"type",@"必须是 JSON 对象");
-  if(s[@"minProperties"]&&[value count]<[s[@"minProperties"] unsignedIntegerValue])return Invalid(issue,path,@"minProperties",[NSString stringWithFormat:@"至少需要 %@ 个字段",s[@"minProperties"]]);
+  if(![value isKindOfClass:NSDictionary.class])return Invalid(issue,path,@"type",DXLoc(@"必须是 JSON 对象"));
+  if(s[@"minProperties"]&&[value count]<[s[@"minProperties"] unsignedIntegerValue])return Invalid(issue,path,@"minProperties",[NSString stringWithFormat:DXLoc(@"至少需要 %@ 个字段"),s[@"minProperties"]]);
   NSDictionary *props=[s[@"properties"] isKindOfClass:NSDictionary.class]?s[@"properties"]:@{};
-  for(NSString *key in s[@"required"])if(!value[key]||value[key]==NSNull.null)return Invalid(issue,FieldPath(path,key),@"required",@"缺少必填字段");
+  for(NSString *key in s[@"required"])if(!value[key]||value[key]==NSNull.null)return Invalid(issue,FieldPath(path,key),@"required",DXLoc(@"缺少必填字段"));
   for(id key in value){
-   if(![key isKindOfClass:NSString.class])return Invalid(issue,path,@"type",@"对象字段名必须是字符串");
+   if(![key isKindOfClass:NSString.class])return Invalid(issue,path,@"type",DXLoc(@"对象字段名必须是字符串"));
    NSString *child=FieldPath(path,key);
-   if(!props[key]&&[s[@"additionalProperties"] isEqual:@NO])return Invalid(issue,child,@"additionalProperties",@"该字段未在工具参数中声明，请移除");
+   if(!props[key]&&[s[@"additionalProperties"] isEqual:@NO])return Invalid(issue,child,@"additionalProperties",DXLoc(@"该字段未在工具参数中声明，请移除"));
    if(!Validate(value[key],props[key]?:([s[@"additionalProperties"] isKindOfClass:NSDictionary.class]?s[@"additionalProperties"]:nil),depth+1,child,issue))return NO;
   }
  }
@@ -138,20 +139,20 @@ static BOOL PreflightError(NSError **error,NSInteger code,NSString *name,NSStrin
 + (NSArray *)schemas:(NSArray *)schemas context:(NSDictionary *)context{NSMutableArray *out=[NSMutableArray new];for(NSDictionary *entry in [self entries:schemas context:context])[out addObject:entry[@"schema"]];return out.copy;}
 + (NSDictionary *)actionCatalog:(NSDictionary *)catalog context:(NSDictionary *)context{NSMutableDictionary *result=[catalog mutableCopy],*actions=[NSMutableDictionary new];for(NSString *name in catalog[@"actions"])if(ActionAvailable(name,context)){NSMutableDictionary *entry=[catalog[@"actions"][name] mutableCopy];entry[@"tier"]=@"A";entry[@"scope"]=[name hasPrefix:@"git_"]?@"current_project":@"declared_app_action";entry[@"requiresUserApproval"]=entry[@"mutates"]?:@NO;entry[@"requiresForeground"]=@([name hasPrefix:@"open_"]||[name isEqual:@"choose_attachment"]);actions[name]=entry;}result[@"actions"]=actions;return result;}
 + (BOOL)preflight:(NSDictionary *)call schemas:(NSArray *)schemas context:(NSDictionary *)context error:(NSError **)error{
- if(![call isKindOfClass:NSDictionary.class]||![call[@"name"] isKindOfClass:NSString.class]||![call[@"arguments"] isKindOfClass:NSDictionary.class])return PreflightError(error,1,@"",@"invalid_arguments",@"advertised",nil,@"工具名称或参数格式有误；参数必须是 JSON 对象。未执行，无需重新授权。",@"Correct the tool name and JSON argument object; do not request user authorization for a formatting error.");
+ if(![call isKindOfClass:NSDictionary.class]||![call[@"name"] isKindOfClass:NSString.class]||![call[@"arguments"] isKindOfClass:NSDictionary.class])return PreflightError(error,1,@"",@"invalid_arguments",@"advertised",nil,DXLoc(@"工具名称或参数格式有误；参数必须是 JSON 对象。未执行，无需重新授权。"),@"Correct the tool name and JSON argument object; do not request user authorization for a formatting error.");
  NSString *name=call[@"name"];NSDictionary *sent=nil;
  for(NSDictionary *schema in schemas)if([schema[@"name"] isEqual:name]){sent=schema;break;}
- if(!sent)return PreflightError(error,2,@"",@"tool_not_advertised",@"advertised",nil,@"此工具未在本轮下发，未执行。请只使用当前请求提供的工具，不要重放历史工具调用。",@"Use only currently advertised tool schemas; do not replay an old call or ask for unrelated authorization.");
+ if(!sent)return PreflightError(error,2,@"",@"tool_not_advertised",@"advertised",nil,DXLoc(@"此工具未在本轮下发，未执行。请只使用当前请求提供的工具，不要重放历史工具调用。"),@"Use only currently advertised tool schemas; do not replay an old call or ask for unrelated authorization.");
  NSDictionary *issue=nil;
  if(!Validate(call[@"arguments"],sent[@"parameters"],0,@"arguments",&issue)){
-  NSString *hint=[name isEqual:@"read_context"]?@"此工具只回读当前会话原文。limit 可省略（默认 4096），或使用 1–4096 的整数；offset 从 0 开始，续读使用返回的 next_offset。":@"请按本轮工具声明修正参数后重试。";
-  NSString *message=[NSString stringWithFormat:@"工具 %@ 参数不符合声明：%@ %@。未执行；这是参数校验失败，无需重新授权。%@",name,issue[@"parameter"],issue[@"message"],hint];
+  NSString *hint=[name isEqual:@"read_context"]?@"此工具只回读当前会话原文。limit 可省略（默认 4096），或使用 1–4096 的整数；offset 从 0 开始，续读使用返回的 next_offset。":DXLoc(@"请按本轮工具声明修正参数后重试。");
+  NSString *message=[NSString stringWithFormat:DXLoc(@"工具 %@ 参数不符合声明：%@ %@。未执行；这是参数校验失败，无需重新授权。%@"),name,issue[@"parameter"],issue[@"message"],hint];
   return PreflightError(error,3,name,@"invalid_arguments",@"advertised",issue,message,[NSString stringWithFormat:@"Correct %@ to match the advertised schema and retry this tool only. Do not replay completed side effects or request authorization to fix an argument error. %@",issue[@"parameter"],hint]);
  }
  for(NSDictionary *current in [self schemas:schemas context:context])if([current[@"name"] isEqual:name]){
   issue=nil;if(Validate(call[@"arguments"],current[@"parameters"],0,@"arguments",&issue))return YES;
-  return PreflightError(error,5,name,@"authorization_changed",@"current",issue,[NSString stringWithFormat:@"工具 %@ 的当前授权范围已变化：%@ %@。未执行。请重新读取当前可用范围，不能沿用已失效的 ID。",name,issue[@"parameter"],issue[@"message"]],@"Refresh current resources and advertised schemas. Do not substitute a newly granted ID within the old request or bypass approval.");
+  return PreflightError(error,5,name,@"authorization_changed",@"current",issue,[NSString stringWithFormat:DXLoc(@"工具 %@ 的当前授权范围已变化：%@ %@。未执行。请重新读取当前可用范围，不能沿用已失效的 ID。"),name,issue[@"parameter"],issue[@"message"]],@"Refresh current resources and advertised schemas. Do not substitute a newly granted ID within the old request or bypass approval.");
  }
- return PreflightError(error,4,name,@"tool_unavailable",@"current",nil,[NSString stringWithFormat:@"工具 %@ 当前不可用：设备能力、会话、开关或授权状态已变化。未执行；请检查对应状态后使用新一轮工具清单。",name],@"Re-check the tool's current availability and refresh the next request schemas. Never bypass the current capability or authorization checks.");
+ return PreflightError(error,4,name,@"tool_unavailable",@"current",nil,[NSString stringWithFormat:DXLoc(@"工具 %@ 当前不可用：设备能力、会话、开关或授权状态已变化。未执行；请检查对应状态后使用新一轮工具清单。"),name],@"Re-check the tool's current availability and refresh the next request schemas. Never bypass the current capability or authorization checks.");
 }
 @end

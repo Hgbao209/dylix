@@ -1,4 +1,5 @@
 #import "GitDiffView.h"
+#import "DylixI18n.h"
 #import <WebKit/WebKit.h>
 #import <git2.h>
 
@@ -71,7 +72,7 @@ static NSString *DisplayPatchHeader(NSString *line) {
         if([line hasPrefix:@"@@ "])inHunk=YES;
         [lines addObject:inHunk?line:DisplayPatchHeader(line)];
     }
-    NSMutableDictionary *payload=[@{@"patch":[lines componentsJoinedByString:@"\n"],@"note":note,@"title":self.title?:@"差异审阅",@"compact":@(self.compact),@"dark":@(self.traitCollection.userInterfaceStyle==UIUserInterfaceStyleDark)} mutableCopy];
+    NSMutableDictionary *payload=[@{@"patch":[lines componentsJoinedByString:@"\n"],@"note":note,@"title":self.title?:DXLoc(@"差异审阅"),@"compact":@(self.compact),@"dark":@(self.traitCollection.userInterfaceStyle==UIUserInterfaceStyleDark)} mutableCopy];
     if(self.conflict)payload[@"conflict"]=self.conflict;
     NSData *data=[NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
     NSString *json=[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -92,7 +93,7 @@ static NSString *DisplayPatchHeader(NSString *line) {
         }
 #endif
 
-        if(error){UILabel *label=[UILabel new];label.text=@"差异预览加载失败，请返回后重试。";label.font=[UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];label.numberOfLines=0;label.frame=CGRectInset(self.view.bounds,24,80);[self.view addSubview:label];}
+        if(error){UILabel *label=[UILabel new];label.text=DXLoc(@"差异预览加载失败，请返回后重试。");label.font=[UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];label.numberOfLines=0;label.frame=CGRectInset(self.view.bounds,24,80);[self.view addSubview:label];}
     }];
 }
 - (void)traitCollectionDidChange:(UITraitCollection *)previous {

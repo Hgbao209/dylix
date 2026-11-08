@@ -1,4 +1,5 @@
 #import "../AIV2Contracts.h"
+#import "../../DylixI18n.h"
 #import "../Core/TFAIRecovery.h"
 #import <TargetConditionals.h>
 
@@ -30,7 +31,7 @@ static NSString *SessionPath(NSString *scope,NSString *identifier) {NSString *ro
 static NSString *SummaryPath(NSString *scope,NSString *identifier) {return [[AIStoreRoot(scope) stringByAppendingPathComponent:@"index"] stringByAppendingPathComponent:[identifier stringByAppendingPathExtension:@"json"]];}
 static NSString *Tombstone(NSString *scope,NSString *identifier){return [[AIStoreRoot(scope) stringByAppendingPathComponent:@"deleted"] stringByAppendingPathComponent:identifier];}
 static BOOL WriteJSON(id value,NSString *path,NSError **error) {
- if(!path||![NSJSONSerialization isValidJSONObject:value]){if(error)*error=AIStoreError(@"会话数据格式有误");return NO;}
+ if(!path||![NSJSONSerialization isValidJSONObject:value]){if(error)*error=AIStoreError(DXLoc(@"会话数据格式有误"));return NO;}
  NSData *data=[NSJSONSerialization dataWithJSONObject:value options:0 error:error];if(!data)return NO;
  if(![NSFileManager.defaultManager createDirectoryAtPath:path.stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:@{NSFilePosixPermissions:@0700} error:error])return NO;
  BOOL ok=[data writeToFile:path options:NSDataWritingAtomic error:error];if(ok){[NSFileManager.defaultManager setAttributes:@{NSFilePosixPermissions:@0600} ofItemAtPath:path error:nil];
@@ -51,14 +52,14 @@ static NSMutableDictionary *Normalize(id obj,NSString *scope){
  if(![record[@"title"] isKindOfClass:NSString.class])record[@"title"]=@"会话";
  if(![record[@"updatedAt"] isKindOfClass:NSNumber.class])record[@"updatedAt"]=@0;
  for(NSString *key in @[@"grants",@"approval",@"apiKey",@"secret",@"Authorization"])[record removeObjectForKey:key];
- if(!TFAISessionHasLiveRun(scope,record[@"id"])&&[@[@"streaming",@"waitingApproval",@"running"] containsObject:record[@"state"]]){NSDictionary *checkpoint=[record[@"runtimeCheckpoint"] isKindOfClass:NSDictionary.class]?record[@"runtimeCheckpoint"]:nil;if([checkpoint[@"messages"] isKindOfClass:NSArray.class])record[@"messages"]=TFAIRecoveryTranscript(checkpoint[@"messages"]);NSMutableArray *records=[NSMutableArray new];for(NSDictionary *item in record[@"processRecords"]){NSMutableDictionary *row=[item mutableCopy];if([@[@"requested",@"running",@"waitingApproval",@"approved"] containsObject:row[@"status"]]){row[@"status"]=@"interrupted";row[@"summary"]=@"中断时未收到完成记录 · 结果待核对";if(!row[@"duration"]&&row[@"startedAt"])row[@"duration"]=@(MAX(0,[checkpoint[@"savedAt"] doubleValue]-[row[@"startedAt"] doubleValue]));}[records addObject:row];}if(record[@"processRecords"])record[@"processRecords"]=records;record[@"recoveryAvailable"]=@YES;record[@"state"]=@"interrupted";record[@"notice"]=@"上次处理已中断，已恢复保存的记录。菜单中可继续分析；未完成工具的结果需先核对，不自动重复执行。";}
+ if(!TFAISessionHasLiveRun(scope,record[@"id"])&&[@[@"streaming",@"waitingApproval",@"running"] containsObject:record[@"state"]]){NSDictionary *checkpoint=[record[@"runtimeCheckpoint"] isKindOfClass:NSDictionary.class]?record[@"runtimeCheckpoint"]:nil;if([checkpoint[@"messages"] isKindOfClass:NSArray.class])record[@"messages"]=TFAIRecoveryTranscript(checkpoint[@"messages"]);NSMutableArray *records=[NSMutableArray new];for(NSDictionary *item in record[@"processRecords"]){NSMutableDictionary *row=[item mutableCopy];if([@[@"requested",@"running",@"waitingApproval",@"approved"] containsObject:row[@"status"]]){row[@"status"]=@"interrupted";row[@"summary"]=DXLoc(@"中断时未收到完成记录 · 结果待核对");if(!row[@"duration"]&&row[@"startedAt"])row[@"duration"]=@(MAX(0,[checkpoint[@"savedAt"] doubleValue]-[row[@"startedAt"] doubleValue]));}[records addObject:row];}if(record[@"processRecords"])record[@"processRecords"]=records;record[@"recoveryAvailable"]=@YES;record[@"state"]=@"interrupted";record[@"notice"]=DXLoc(@"上次处理已中断，已恢复保存的记录。菜单中可继续分析；未完成工具的结果需先核对，不自动重复执行。");}
  return record;
 }
 static NSDictionary *MakeSummary(NSDictionary *record,NSString *scope){
  NSMutableDictionary *summary=[NSMutableDictionary new];for(NSString *key in @[@"id",@"title",@"updatedAt",@"createdAt",@"pinned",@"projectName",@"projectRoot",@"associatedProjectID",@"state",@"mode"]){id v=record[key];if(v)summary[key]=v;}
  if([summary[@"title"] hasSuffix:@" · 编辑前"]){NSString *title=summary[@"title"];summary[@"title"]=[@"[编辑前备份] " stringByAppendingString:[title substringToIndex:title.length-6]];}
  summary[@"storageProjectID"]=scope;summary[@"schemaVersion"]=@2;summary[@"messageCount"]=@([record[@"messages"] count]);
- NSString *preview=@"尚未发送消息";for(NSDictionary *m in [record[@"messages"] reverseObjectEnumerator])if([m isKindOfClass:NSDictionary.class]&&[@[@"assistant",@"user"] containsObject:m[@"role"]]&&[m[@"content"] isKindOfClass:NSString.class]&&[m[@"content"] length]){preview=m[@"content"];NSRange context=[preview rangeOfString:@"<project_context>"];if(context.location!=NSNotFound)preview=[preview substringToIndex:context.location];break;}
+ NSString *preview=DXLoc(@"尚未发送消息");for(NSDictionary *m in [record[@"messages"] reverseObjectEnumerator])if([m isKindOfClass:NSDictionary.class]&&[@[@"assistant",@"user"] containsObject:m[@"role"]]&&[m[@"content"] isKindOfClass:NSString.class]&&[m[@"content"] length]){preview=m[@"content"];NSRange context=[preview rangeOfString:@"<project_context>"];if(context.location!=NSNotFound)preview=[preview substringToIndex:context.location];break;}
  preview=[[preview componentsSeparatedByCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] componentsJoinedByString:@" "];if(preview.length>180)preview=[preview substringToIndex:180];summary[@"summary"]=preview;return summary;
 }
 // Opening, drafts, folding and migration of UI message IDs are not conversation activity.
@@ -84,9 +85,9 @@ static NSArray *Sorted(NSArray *items){return [items sortedArrayUsingComparator:
 + (BOOL)save:(NSDictionary *)session project:(NSString *)projectID error:(NSError **)error {
  @synchronized(self){
  NSString *storedScope=session[@"storageProjectID"];
- if(storedScope.length&&![storedScope isEqual:projectID]){if(error)*error=AIStoreError(@"会话存储位置与原记录不一致，请从会话列表重新打开；原记录已保留");return NO;}
- NSString *path=SessionPath(projectID,session[@"id"]);if(!path||![session[@"messages"] isKindOfClass:NSArray.class]){if(error)*error=AIStoreError(@"会话标识或消息格式有误");return NO;}
- if([NSFileManager.defaultManager fileExistsAtPath:Tombstone(projectID,session[@"id"])]){if(error)*error=AIStoreError(@"会话已删除，请创建新会话；旧回调不会恢复删除记录");return NO;}
+ if(storedScope.length&&![storedScope isEqual:projectID]){if(error)*error=AIStoreError(DXLoc(@"会话存储位置与原记录不一致，请从会话列表重新打开；原记录已保留"));return NO;}
+ NSString *path=SessionPath(projectID,session[@"id"]);if(!path||![session[@"messages"] isKindOfClass:NSArray.class]){if(error)*error=AIStoreError(DXLoc(@"会话标识或消息格式有误"));return NO;}
+ if([NSFileManager.defaultManager fileExistsAtPath:Tombstone(projectID,session[@"id"])]){if(error)*error=AIStoreError(DXLoc(@"会话已删除，请创建新会话；旧回调不会恢复删除记录"));return NO;}
  NSMutableDictionary *safe=[session mutableCopy];NSDictionary *existing=ReadJSON(path);if([existing isKindOfClass:NSDictionary.class]&&[existing[@"metadataRevision"] unsignedLongLongValue]>[safe[@"metadataRevision"] unsignedLongLongValue]){for(NSString *key in @[@"title",@"pinned",@"projectName",@"projectRoot",@"associatedProjectID",@"metadataRevision"]){if(existing[key])safe[key]=existing[key];else[safe removeObjectForKey:key];}}
  // Remote turns own the transcript, not the native composer's unsent user input.
  if([safe[@"remoteRevision"] unsignedLongLongValue]>[existing[@"remoteRevision"] unsignedLongLongValue])for(NSString *key in @[@"draft",@"pendingAttachments",@"folds",@"permissionPreferences",@"scrollY",@"followBottom"]){if(existing[key])safe[key]=existing[key];}
@@ -98,7 +99,7 @@ static NSArray *Sorted(NSArray *items){return [items sortedArrayUsingComparator:
  safe[@"schemaVersion"]=@2;safe[@"storageProjectID"]=projectID;NSArray *previousMessages=Normalize(existing,projectID)[@"messages"]?:existing[@"messages"];BOOL changed=existing&&![ActivityMessages(previousMessages) isEqual:ActivityMessages(safe[@"messages"])];
  safe[@"updatedAt"]=changed?@(NSDate.date.timeIntervalSince1970):(existing[@"updatedAt"]?:safe[@"updatedAt"]?:safe[@"createdAt"]?:@(NSDate.date.timeIntervalSince1970));
  for(NSString *key in @[@"grants",@"approval",@"apiKey",@"secret",@"Authorization"])[safe removeObjectForKey:key];
- NSData *data=[NSJSONSerialization dataWithJSONObject:safe options:0 error:error];if(!data)return NO;if(data.length>32*1024*1024){if(error)*error=AIStoreError(@"会话已超过 32 MB，请新建会话");return NO;}
+ NSData *data=[NSJSONSerialization dataWithJSONObject:safe options:0 error:error];if(!data)return NO;if(data.length>32*1024*1024){if(error)*error=AIStoreError(DXLoc(@"会话已超过 32 MB，请新建会话"));return NO;}
  if(!WriteJSON(safe,path,error))return NO;
  // Metadata is a rebuildable cache; payload remains authoritative if index write is interrupted.
  WriteJSON(MakeSummary(safe,projectID),SummaryPath(projectID,session[@"id"]),nil);
@@ -113,25 +114,25 @@ static NSArray *Sorted(NSArray *items){return [items sortedArrayUsingComparator:
     NSMutableOrderedSet *selected=[NSMutableOrderedSet new];NSFileManager *fm=NSFileManager.defaultManager;
     NSString *prefix=[base stringByAppendingString:@"/"];
     for(id raw in paths) {
-        if(![raw isKindOfClass:NSString.class]){if(error)*error=AIStoreError(@"附件路径格式有误");return @[];}
+        if(![raw isKindOfClass:NSString.class]){if(error)*error=AIStoreError(DXLoc(@"附件路径格式有误"));return @[];}
         NSString *p=[raw isAbsolutePath]?raw:[base stringByAppendingPathComponent:raw];p=p.stringByStandardizingPath;
         NSString *resolved=p.stringByResolvingSymlinksInPath;
-        if(![resolved hasPrefix:prefix]&&![resolved isEqual:base]){if(error)*error=AIStoreError(@"所选附件超出项目范围");return @[];}
+        if(![resolved hasPrefix:prefix]&&![resolved isEqual:base]){if(error)*error=AIStoreError(DXLoc(@"所选附件超出项目范围"));return @[];}
         NSString *rel=[resolved isEqual:base]?@"":[resolved substringFromIndex:prefix.length];
-        if(AIExcluded(rel)){if(error)*error=AIStoreError([NSString stringWithFormat:@"已排除敏感文件或构建产物：%@",rel]);return @[];}
-        BOOL dir=NO;if(![fm fileExistsAtPath:resolved isDirectory:&dir]){if(error)*error=AIStoreError(@"所选附件已不存在");return @[];}
+        if(AIExcluded(rel)){if(error)*error=AIStoreError([NSString stringWithFormat:DXLoc(@"已排除敏感文件或构建产物：%@"),rel]);return @[];}
+        BOOL dir=NO;if(![fm fileExistsAtPath:resolved isDirectory:&dir]){if(error)*error=AIStoreError(DXLoc(@"所选附件已不存在"));return @[];}
         if(!dir){[selected addObject:resolved];continue;}
         NSDirectoryEnumerator *en=[fm enumeratorAtURL:[NSURL fileURLWithPath:resolved isDirectory:YES] includingPropertiesForKeys:@[NSURLIsDirectoryKey,NSURLIsSymbolicLinkKey] options:NSDirectoryEnumerationSkipsHiddenFiles errorHandler:^BOOL(NSURL *url,NSError *e){return NO;}];
-        for(NSURL *url in en){NSString *candidate=url.path;NSString *r=[candidate substringFromIndex:prefix.length];NSNumber *sym=nil,*isdir=nil;[url getResourceValue:&sym forKey:NSURLIsSymbolicLinkKey error:nil];[url getResourceValue:&isdir forKey:NSURLIsDirectoryKey error:nil];if(sym.boolValue||AIExcluded(r)){[en skipDescendants];continue;}if(!isdir.boolValue)[selected addObject:candidate];if(selected.count>80){if(error)*error=AIStoreError(@"附件超过 80 个文件，请缩小范围");return @[];}}
+        for(NSURL *url in en){NSString *candidate=url.path;NSString *r=[candidate substringFromIndex:prefix.length];NSNumber *sym=nil,*isdir=nil;[url getResourceValue:&sym forKey:NSURLIsSymbolicLinkKey error:nil];[url getResourceValue:&isdir forKey:NSURLIsDirectoryKey error:nil];if(sym.boolValue||AIExcluded(r)){[en skipDescendants];continue;}if(!isdir.boolValue)[selected addObject:candidate];if(selected.count>80){if(error)*error=AIStoreError(DXLoc(@"附件超过 80 个文件，请缩小范围"));return @[];}}
     }
-    if(selected.count>80){if(error)*error=AIStoreError(@"附件超过 80 个文件，请缩小范围");return @[];}
+    if(selected.count>80){if(error)*error=AIStoreError(DXLoc(@"附件超过 80 个文件，请缩小范围"));return @[];}
     NSMutableArray *result=[NSMutableArray new];NSUInteger total=0;
-    for(NSString *file in selected){NSDictionary *attrs=[fm attributesOfItemAtPath:file error:error];if(!attrs)return @[];if([attrs fileSize]>256*1024){if(error)*error=AIStoreError([NSString stringWithFormat:@"%@ 超过单文件 256 KB，请选取较小的上下文",file.lastPathComponent]);return @[];}
+    for(NSString *file in selected){NSDictionary *attrs=[fm attributesOfItemAtPath:file error:error];if(!attrs)return @[];if([attrs fileSize]>256*1024){if(error)*error=AIStoreError([NSString stringWithFormat:DXLoc(@"%@ 超过单文件 256 KB，请选取较小的上下文"),file.lastPathComponent]);return @[];}
         NSData *data=[NSData dataWithContentsOfFile:file options:0 error:error];if(!data)return @[];
-        total+=data.length;if(total>768*1024){if(error)*error=AIStoreError(@"附件总量超过 768 KB，请减少附件；内容未截断");return @[];}
+        total+=data.length;if(total>768*1024){if(error)*error=AIStoreError(DXLoc(@"附件总量超过 768 KB，请减少附件；内容未截断"));return @[];}
         NSString *text=[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-        if(!text||[text rangeOfString:[NSString stringWithFormat:@"%C",(unichar)0]].location!=NSNotFound){if(error)*error=AIStoreError([NSString stringWithFormat:@"%@ 不是 UTF-8 文本，请通过图片入口添加图片",file.lastPathComponent]);return @[];}
-        if(AISensitiveText(text)){if(error)*error=AIStoreError([NSString stringWithFormat:@"%@ 含疑似密钥，已停止附加",file.lastPathComponent]);return @[];}
+        if(!text||[text rangeOfString:[NSString stringWithFormat:@"%C",(unichar)0]].location!=NSNotFound){if(error)*error=AIStoreError([NSString stringWithFormat:DXLoc(@"%@ 不是 UTF-8 文本，请通过图片入口添加图片"),file.lastPathComponent]);return @[];}
+        if(AISensitiveText(text)){if(error)*error=AIStoreError([NSString stringWithFormat:DXLoc(@"%@ 含疑似密钥，已停止附加"),file.lastPathComponent]);return @[];}
         [result addObject:@{@"path":[file substringFromIndex:prefix.length],@"content":text,@"bytes":@(data.length),@"kind":@"text"}];
     }return result;
 }
@@ -149,9 +150,9 @@ static NSArray *Sorted(NSArray *items){return [items sortedArrayUsingComparator:
  return Sorted(all);}
 }
 + (BOOL)saveMetadata:(NSDictionary *)metadata identifier:(NSString *)identifier project:(NSString *)scope error:(NSError **)error {
- @synchronized(self){NSMutableDictionary *record=[self loadSession:identifier project:scope];if(!record){if(error)*error=AIStoreError(@"会话已删除或不存在");return NO;}
+ @synchronized(self){NSMutableDictionary *record=[self loadSession:identifier project:scope];if(!record){if(error)*error=AIStoreError(DXLoc(@"会话已删除或不存在"));return NO;}
  NSSet *allowed=[NSSet setWithArray:@[@"title",@"pinned",@"projectName",@"projectRoot",@"associatedProjectID",@"draft",@"draftText",@"attachments",@"pendingAttachments",@"scrollOffset",@"folds",@"collapsed",@"mode",@"selectedConnection",@"selectedModel",@"followBottom"]];
- for(NSString *key in metadata){if(![allowed containsObject:key]){if(error)*error=AIStoreError(@"此字段不属于会话显示设置");return NO;}id value=metadata[key];if([@[@"title",@"projectName",@"projectRoot",@"associatedProjectID",@"draft",@"draftText",@"mode",@"selectedModel"] containsObject:key]&&value!=NSNull.null&&![value isKindOfClass:NSString.class]){if(error)*error=AIStoreError(@"会话文字字段格式有误");return NO;}if([@[@"pinned",@"scrollOffset",@"followBottom"] containsObject:key]&&value!=NSNull.null&&![value isKindOfClass:NSNumber.class]){if(error)*error=AIStoreError(@"会话状态字段格式有误");return NO;}if(value==NSNull.null)[record removeObjectForKey:key];else record[key]=value;}
+ for(NSString *key in metadata){if(![allowed containsObject:key]){if(error)*error=AIStoreError(DXLoc(@"此字段不属于会话显示设置"));return NO;}id value=metadata[key];if([@[@"title",@"projectName",@"projectRoot",@"associatedProjectID",@"draft",@"draftText",@"mode",@"selectedModel"] containsObject:key]&&value!=NSNull.null&&![value isKindOfClass:NSString.class]){if(error)*error=AIStoreError(DXLoc(@"会话文字字段格式有误"));return NO;}if([@[@"pinned",@"scrollOffset",@"followBottom"] containsObject:key]&&value!=NSNull.null&&![value isKindOfClass:NSNumber.class]){if(error)*error=AIStoreError(DXLoc(@"会话状态字段格式有误"));return NO;}if(value==NSNull.null)[record removeObjectForKey:key];else record[key]=value;}
  record[@"metadataRevision"]=@([record[@"metadataRevision"] unsignedLongLongValue]+1);return [self save:record project:scope error:error];}
 }
 @end

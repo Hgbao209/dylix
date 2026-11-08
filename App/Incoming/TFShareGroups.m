@@ -1,4 +1,5 @@
 #import "TFShareGroups.h"
+#import "../DylixI18n.h"
 #import "TFIncoming.h"
 #import <mach-o/loader.h>
 #import <mach-o/fat.h>
@@ -41,4 +42,4 @@ static NSDictionary *Resolve(void){
  result[@"bundleID"]=current.bundleIdentifier?:@"";result[@"mainBundleID"]=main.bundleIdentifier?:@"";result[@"mainGroups"]=mainGroups;result[@"extensionGroups"]=extGroups;return result;
 }
 NSURL *TFShareContainer(void){id url=Resolve()[@"containerURL"];return [url isKindOfClass:NSURL.class]?url:nil;}
-NSDictionary *TFShareContainerDiagnostics(void){NSMutableDictionary *result=[Resolve() mutableCopy];[result removeObjectForKey:@"containerURL"];result[@"build"]=NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"]?:@"";result[@"note"]=@"attemptedGroups 列出逐一查询的实际结果；usableGroups 仅列出系统返回了容器的组。没有读取证书、令牌或设备标识。";return result;}
+NSDictionary *TFShareContainerDiagnostics(void){NSMutableDictionary *result=[Resolve() mutableCopy];[result removeObjectForKey:@"containerURL"];result[@"build"]=NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"]?:@"";result[@"note"]=DXLoc(@"attemptedGroups 列出逐一查询的实际结果；usableGroups 仅列出系统返回了容器的组。没有读取证书、令牌或设备标识。");return result;}

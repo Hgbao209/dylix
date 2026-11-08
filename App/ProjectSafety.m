@@ -1,4 +1,5 @@
 #import "ProjectSafety.h"
+#import "DylixI18n.h"
 
 @implementation TMCLineIndex
 - (void)update:(NSString *)text{NSMutableArray *starts=[NSMutableArray arrayWithObject:@0];NSUInteger offset=0;while(offset<text.length){NSRange next=[text rangeOfString:@"\n" options:NSLiteralSearch range:NSMakeRange(offset,text.length-offset)];if(next.location==NSNotFound)break;offset=next.location+1;[starts addObject:@(offset)];}_starts=starts;}
@@ -21,16 +22,16 @@ NSDictionary *TMCReadDraft(NSString *root){
  return value;
 }
 BOOL TMCWriteDocument(NSString *path, NSData *expected, NSString *text, NSError **error){
- if(!path.length||!text)return Fail(error,1,@"文件路径或内容无效");
+ if(!path.length||!text)return Fail(error,1,DXLoc(@"文件路径或内容无效"));
  __block BOOL ok=NO;__block NSError *failure=nil;NSError *coordination=nil;
  NSFileCoordinator *coordinator=[[NSFileCoordinator alloc] initWithFilePresenter:nil];
  [coordinator coordinateWritingItemAtURL:[NSURL fileURLWithPath:path] options:0 error:&coordination byAccessor:^(NSURL *url){
   NSData *current=[NSData dataWithContentsOfURL:url options:0 error:&failure];
   if(!current)return;
-  if(![current isEqual:expected]){Fail(&failure,409,@"磁盘文件已被其他操作修改，已保留双方内容。请选择处理方式。");return;}
+  if(![current isEqual:expected]){Fail(&failure,409,DXLoc(@"磁盘文件已被其他操作修改，已保留双方内容。请选择处理方式。"));return;}
   ok=[[text dataUsingEncoding:NSUTF8StringEncoding] writeToURL:url options:NSDataWritingAtomic error:&failure];
  }];
- if(!ok&&error)*error=failure?:coordination?:[NSError errorWithDomain:@"TweakForge.Files" code:2 userInfo:@{NSLocalizedDescriptionKey:@"保存未完成"}];return ok;
+ if(!ok&&error)*error=failure?:coordination?:[NSError errorWithDomain:@"TweakForge.Files" code:2 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"保存未完成")}];return ok;
 }
 static BOOL Excluded(NSString *relative,BOOL share){
  for(NSString *part in relative.pathComponents){
@@ -46,18 +47,18 @@ BOOL TMCCopyProject(NSString *root,NSString *destination,BOOL share,NSProgress *
  NSFileManager *fm=NSFileManager.defaultManager;NSMutableArray *files=[NSMutableArray new];
  NSDirectoryEnumerator *enumerator=[fm enumeratorAtPath:root];NSString *relative;unsigned long long bytes=0;
  while((relative=enumerator.nextObject)){
-  if(progress.cancelled)return Fail(error,NSUserCancelledError,@"已取消准备项目");
+  if(progress.cancelled)return Fail(error,NSUserCancelledError,DXLoc(@"已取消准备项目"));
   if(Excluded(relative,share)){[enumerator skipDescendants];continue;}
   NSDictionary *a=[fm attributesOfItemAtPath:[root stringByAppendingPathComponent:relative] error:error];if(!a)return NO;
   if([a[NSFileType] isEqual:NSFileTypeSymbolicLink])return Fail(error,3,[@"项目含链接，请先转换为普通文件：" stringByAppendingString:relative]);
   if([a[NSFileType] isEqual:NSFileTypeDirectory])continue;
-  if(![a[NSFileType] isEqual:NSFileTypeRegular])return Fail(error,3,@"项目含特殊文件");
+  if(![a[NSFileType] isEqual:NSFileTypeRegular])return Fail(error,3,DXLoc(@"项目含特殊文件"));
   bytes+=[a[NSFileSize] unsignedLongLongValue];[files addObject:relative];
  }
  progress.totalUnitCount=MAX(1,(int64_t)bytes);progress.completedUnitCount=0;if(update)update(progress);
  if(![fm createDirectoryAtPath:destination withIntermediateDirectories:YES attributes:nil error:error])return NO;
  for(relative in files){
-  if(progress.cancelled)return Fail(error,NSUserCancelledError,@"已取消准备项目");
+  if(progress.cancelled)return Fail(error,NSUserCancelledError,DXLoc(@"已取消准备项目"));
   NSString *source=[root stringByAppendingPathComponent:relative],*target=[destination stringByAppendingPathComponent:relative];
   if(![fm createDirectoryAtPath:target.stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:nil error:error]||![fm copyItemAtPath:source toPath:target error:error])return NO;
   progress.completedUnitCount+=[[fm attributesOfItemAtPath:target error:nil][NSFileSize] longLongValue];if(update)update(progress);

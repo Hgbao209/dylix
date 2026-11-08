@@ -1,10 +1,11 @@
 #import "DXRemoteTLS.h"
+#import "../DylixI18n.h"
 #import <CommonCrypto/CommonDigest.h>
 #import <arpa/inet.h>
 // Exported since iOS 11.2; declared in the iOS 26 public header. Keep Xcode 16
 // simulator compilation consistent with the same runtime API.
 extern SecIdentityRef _Nullable SecIdentityCreate(CFAllocatorRef _Nullable allocator,SecCertificateRef certificate,SecKeyRef key) CF_RETURNS_RETAINED;
-static NSError *TLSError(NSInteger code){return [NSError errorWithDomain:@"Dylix.Remote.TLS" code:code userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"本机 TLS 身份准备失败（%ld），请检查签名与钥匙串权限",(long)code]}];}
+static NSError *TLSError(NSInteger code){return [NSError errorWithDomain:@"Dylix.Remote.TLS" code:code userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:DXLoc(@"本机 TLS 身份准备失败（%ld），请检查签名与钥匙串权限"),(long)code]}];}
 static NSData *DER(uint8_t tag,NSData *body){NSMutableData *d=[NSMutableData dataWithBytes:&tag length:1];NSUInteger n=body.length;if(n<128){uint8_t b=n;[d appendBytes:&b length:1];}else{uint8_t bytes[sizeof(NSUInteger)],length=0;for(NSUInteger v=n;v;v>>=8)bytes[sizeof(bytes)-1-length++]=v&255;uint8_t b=0x80|length;[d appendBytes:&b length:1];[d appendBytes:bytes+sizeof(bytes)-length length:length];}[d appendData:body];return d;}
 static NSData *Join(NSArray<NSData *> *parts){NSMutableData *d=[NSMutableData new];for(NSData *p in parts)[d appendData:p];return d;}
 static NSData *Hex(NSString *s){NSMutableData *d=[NSMutableData new];for(NSUInteger i=0;i+1<s.length;i+=2){unsigned v=0;[[NSScanner scannerWithString:[s substringWithRange:NSMakeRange(i,2)]] scanHexInt:&v];uint8_t b=v;[d appendBytes:&b length:1];}return d;}

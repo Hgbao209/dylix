@@ -1,4 +1,5 @@
 #import "AI/Agent/TFAIBuildCheckpoint.h"
+#import "DylixI18n.h"
 #import "AI/Agent/TFAIBuildQueue.h"
 #import "AI/Background/TFScreenAwake.h"
 #import "StorageSpace.h"
@@ -25,7 +26,7 @@
 #import "../Vendor/MBProgressHUD/MBProgressHUD.h"
 
 static void TMCLog(FILE *stream, const char *format, ...) {
- if(!stream)return;va_list args;va_start(args,format);char *buffer=NULL;int count=vasprintf(&buffer,format,args);va_end(args);NSString *message=count>=0?[[NSString alloc] initWithBytes:buffer length:(NSUInteger)count encoding:NSUTF8StringEncoding]:nil;free(buffer);if(!message)message=@"日志编码错误";
+ if(!stream)return;va_list args;va_start(args,format);char *buffer=NULL;int count=vasprintf(&buffer,format,args);va_end(args);NSString *message=count>=0?[[NSString alloc] initWithBytes:buffer length:(NSUInteger)count encoding:NSUTF8StringEncoding]:nil;free(buffer);if(!message)message=DXLoc(@"日志编码错误");
  NSDateFormatter *formatter=[NSDateFormatter new];formatter.locale=[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];formatter.dateFormat=@"HH:mm:ss.SSS";NSString *stamp=[formatter stringFromDate:NSDate.date];[message enumerateSubstringsInRange:NSMakeRange(0,message.length) options:NSStringEnumerationByLines usingBlock:^(NSString *line,NSRange range,NSRange enclosing,BOOL *stop){fprintf(stream,"[%s] %s\n",stamp.UTF8String,line.UTF8String);}];fflush(stream);
 }
 
@@ -161,18 +162,18 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
 @implementation TMCLocalFolders
 - (void)viewDidLoad{
  [super viewDidLoad];self.title=[self.directory isEqual:self.boundary]?@"Dylix 本机目录":self.directory.lastPathComponent;
- self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:@"打开" style:UIBarButtonItemStyleDone target:self action:@selector(choose)];self.navigationItem.rightBarButtonItem.accessibilityLabel=@"打开当前工程文件夹";
+ self.navigationItem.rightBarButtonItem=[[UIBarButtonItem alloc] initWithTitle:DXLoc(@"打开") style:UIBarButtonItemStyleDone target:self action:@selector(choose)];self.navigationItem.rightBarButtonItem.accessibilityLabel=DXLoc(@"打开当前工程文件夹");
  self.navigationItem.rightBarButtonItem.enabled=![self.directory isEqual:self.boundary];
  if([self.directory isEqual:self.boundary])self.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancel)];
  NSMutableArray *items=[NSMutableArray new];NSError *error=nil;
  NSArray *urls=[NSFileManager.defaultManager contentsOfDirectoryAtURL:[NSURL fileURLWithPath:self.directory] includingPropertiesForKeys:@[NSURLIsDirectoryKey,NSURLIsSymbolicLinkKey] options:NSDirectoryEnumerationSkipsHiddenFiles error:&error];
  for(NSURL *url in urls){NSDictionary *v=[url resourceValuesForKeys:@[NSURLIsDirectoryKey,NSURLIsSymbolicLinkKey] error:nil];NSString *name=url.lastPathComponent;if([v[NSURLIsSymbolicLinkKey] boolValue]||[name hasPrefix:@"Build-"]||[name hasPrefix:@"Snapshot-"])continue;[items addObject:@{@"name":name,@"directory":v[NSURLIsDirectoryKey]?:@NO}];}
  [items sortUsingComparator:^NSComparisonResult(NSDictionary *a,NSDictionary *b){if([a[@"directory"] boolValue]!=[b[@"directory"] boolValue])return [a[@"directory"] boolValue]?NSOrderedAscending:NSOrderedDescending;return [a[@"name"] localizedStandardCompare:b[@"name"]];}];self.entries=items;
- if(error||!items.count){UILabel *empty=[UILabel new];empty.text=error.localizedDescription?:@"此文件夹为空。请先在“文件”App 中复制工程到 Dylix。";empty.numberOfLines=0;empty.textAlignment=NSTextAlignmentCenter;empty.textColor=UIColor.secondaryLabelColor;self.tableView.backgroundView=empty;}
+ if(error||!items.count){UILabel *empty=[UILabel new];empty.text=error.localizedDescription?:DXLoc(@"此文件夹为空。请先在“文件”App 中复制工程到 Dylix。");empty.numberOfLines=0;empty.textAlignment=NSTextAlignmentCenter;empty.textColor=UIColor.secondaryLabelColor;self.tableView.backgroundView=empty;}
 }
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{return @"进入工程文件夹，再点右上角“打开” · 本机直接读取";}
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{return DXLoc(@"进入工程文件夹，再点右上角“打开” · 本机直接读取");}
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{return self.entries.count;}
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)index{NSDictionary *item=self.entries[index.row];BOOL directory=[item[@"directory"] boolValue];UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];cell.textLabel.text=item[@"name"];cell.textLabel.lineBreakMode=NSLineBreakByTruncatingMiddle;cell.imageView.image=[UIImage systemImageNamed:directory?@"folder":@"doc.text"];cell.imageView.tintColor=directory?UIColor.systemOrangeColor:UIColor.secondaryLabelColor;cell.accessoryType=directory?UITableViewCellAccessoryDisclosureIndicator:UITableViewCellAccessoryNone;cell.selectionStyle=directory?UITableViewCellSelectionStyleDefault:UITableViewCellSelectionStyleNone;cell.detailTextLabel.text=directory?@"点击进入":@"工程文件";return cell;}
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)index{NSDictionary *item=self.entries[index.row];BOOL directory=[item[@"directory"] boolValue];UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];cell.textLabel.text=item[@"name"];cell.textLabel.lineBreakMode=NSLineBreakByTruncatingMiddle;cell.imageView.image=[UIImage systemImageNamed:directory?@"folder":@"doc.text"];cell.imageView.tintColor=directory?UIColor.systemOrangeColor:UIColor.secondaryLabelColor;cell.accessoryType=directory?UITableViewCellAccessoryDisclosureIndicator:UITableViewCellAccessoryNone;cell.selectionStyle=directory?UITableViewCellSelectionStyleDefault:UITableViewCellSelectionStyleNone;cell.detailTextLabel.text=directory?@"点击进入":DXLoc(@"工程文件");return cell;}
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)index{[tableView deselectRowAtIndexPath:index animated:YES];NSDictionary *item=self.entries[index.row];if(![item[@"directory"] boolValue])return;TMCLocalFolders *next=[TMCLocalFolders new];next.directory=[self.directory stringByAppendingPathComponent:item[@"name"]];next.boundary=self.boundary;next.selected=self.selected;[self.navigationController pushViewController:next animated:YES];}
 - (void)choose{if([self.directory isEqual:self.boundary])return;if(self.selected)self.selected(self.directory);}
 - (void)cancel{[self dismissViewControllerAnimated:YES completion:nil];}
@@ -186,14 +187,14 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
 @end
 @implementation TMCArchiveProjectList
 - (void)viewDidLoad {
-    [super viewDidLoad];self.title=[NSString stringWithFormat:@"选择工程（%lu）",(unsigned long)self.projects.count];
+    [super viewDidLoad];self.title=[NSString stringWithFormat:DXLoc(@"选择工程（%lu）"),(unsigned long)self.projects.count];
     self.navigationItem.leftBarButtonItem=[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel target:self action:@selector(cancel)];
 }
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{return @"压缩包中发现多个工程，选择一个导入";}
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section{return DXLoc(@"压缩包中发现多个工程，选择一个导入");}
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{return self.projects.count;}
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)index {
     NSDictionary *project=self.projects[index.row];UITableViewCell *cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
-    cell.textLabel.text=project[@"name"];cell.detailTextLabel.text=[NSString stringWithFormat:@"%@ · %@ 个源码",project[@"relative"],project[@"sources"]];cell.detailTextLabel.numberOfLines=2;
+    cell.textLabel.text=project[@"name"];cell.detailTextLabel.text=[NSString stringWithFormat:DXLoc(@"%@ · %@ 个源码"),project[@"relative"],project[@"sources"]];cell.detailTextLabel.numberOfLines=2;
     cell.imageView.image=[UIImage systemImageNamed:@"folder"];cell.imageView.tintColor=UIColor.systemOrangeColor;cell.accessoryType=UITableViewCellAccessoryDisclosureIndicator;return cell;
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)index {
@@ -207,7 +208,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
 @implementation CompilerController
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"本地编译验证";
+    self.title = DXLoc(@"本地编译验证");
     self.view.backgroundColor = UIColor.systemBackgroundColor;
     self.console = [[UITextView alloc] initWithFrame:self.view.bounds];
     self.console.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
@@ -215,9 +216,9 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     self.console.editable = NO;
     TMCEnableTextLinks(self.console);
     [self.view addSubview:self.console];
-    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"运行" style:UIBarButtonItemStylePlain target:self action:@selector(runProof)];
-    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"导入源码" style:UIBarButtonItemStylePlain target:self action:@selector(importSource)];
-    self.toolbarItems = @[[[UIBarButtonItem alloc] initWithTitle:@"导出结果" style:UIBarButtonItemStylePlain target:self action:@selector(exportResult)]];
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:DXLoc(@"运行") style:UIBarButtonItemStylePlain target:self action:@selector(runProof)];
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:DXLoc(@"导入源码") style:UIBarButtonItemStylePlain target:self action:@selector(importSource)];
+    self.toolbarItems = @[[[UIBarButtonItem alloc] initWithTitle:DXLoc(@"导出结果") style:UIBarButtonItemStylePlain target:self action:@selector(exportResult)]];
     self.navigationController.toolbarHidden = NO;
     NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
     NSArray *previous = [[NSFileManager.defaultManager contentsOfDirectoryAtPath:documents error:nil] sortedArrayUsingSelector:@selector(compare:)];
@@ -228,14 +229,14 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         NSDate *date = [NSFileManager.defaultManager attributesOfItemAtPath:path error:nil][NSFileModificationDate];
         if (date && [date compare:latest] == NSOrderedDescending) { latest = date; self.lastBuild = path; }
     }
-    self.console.text = @"Dylix · 技术验证版\n\n导入多源码工程文件夹，或点击运行构建内置 Objective-C 样本。\n\n目标：arm64 · iOS 15+ · Rootless .deb\n所有构建步骤在 App 进程内执行。";
+    self.console.text = DXLoc(@"Dylix · 技术验证版\n\n导入多源码工程文件夹，或点击运行构建内置 Objective-C 样本。\n\n目标：arm64 · iOS 15+ · Rootless .deb\n所有构建步骤在 App 进程内执行。");
     NSString *savedSource = [NSUserDefaults.standardUserDefaults stringForKey:@"ImportedSourceRelativePath"];
     if (savedSource) {
         NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
         NSString *restored = [documents stringByAppendingPathComponent:savedSource];
         if ([NSFileManager.defaultManager fileExistsAtPath:restored]) {
             self.importedSource = restored;
-            self.console.text = [self.console.text stringByAppendingFormat:@"\n\n已恢复导入源码：%@", restored.lastPathComponent];
+            self.console.text = [self.console.text stringByAppendingFormat:DXLoc(@"\n\n已恢复导入源码：%@"), restored.lastPathComponent];
         }
     }
     NSString *savedProject = [NSUserDefaults.standardUserDefaults stringForKey:@"ImportedProject"];
@@ -294,8 +295,8 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     id<UIViewControllerTransitionCoordinator> transition=host.presentedViewController.transitionCoordinator?:host.transitionCoordinator;
     if(transition&&[transition animateAlongsideTransition:nil completion:^(id<UIViewControllerTransitionCoordinatorContext> context){dispatch_async(dispatch_get_main_queue(),^{[self showImportMessage:message];});}])return;
     if(host.presentedViewController){[host dismissViewControllerAnimated:YES completion:^{[self showImportMessage:message];}];return;}
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"导入结果" message:message preferredStyle:UIAlertControllerStyleAlert];
-    [alert addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:DXLoc(@"导入结果") message:message preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:DXLoc(@"知道了") style:UIAlertActionStyleDefault handler:nil]];
     [[self importHost] presentViewController:alert animated:YES completion:nil];
 }
 - (UIViewController *)importHost { return self.presentationHost ?: self; }
@@ -306,7 +307,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     picker.allowsMultipleSelection=YES;
     picker.shouldShowFileExtensions=YES;
     picker.delegate=self;
-    picker.title=@"选择源码及配置文件";
+    picker.title=DXLoc(@"选择源码及配置文件");
     self.activePicker=picker;
     dispatch_async(dispatch_get_main_queue(), ^{[self presentPendingPicker];});
 }
@@ -316,7 +317,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     // A generic type also exposes providers' unregistered .7z/.rar types.
     UIDocumentPickerViewController *picker=[[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeItem] asCopy:YES];
     picker.allowsMultipleSelection=NO;picker.shouldShowFileExtensions=YES;picker.delegate=self;
-    picker.title=@"选择压缩包 · ZIP / 7z / RAR / TAR";self.activePicker=picker;
+    picker.title=DXLoc(@"选择压缩包 · ZIP / 7z / RAR / TAR");self.activePicker=picker;
     dispatch_async(dispatch_get_main_queue(),^{[self presentPendingPicker];});
 }
 - (void)presentPendingPicker {
@@ -347,10 +348,10 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
 - (void)importSource {
     UIViewController *host=[self importHost];
     if(host.presentedViewController)return;
-    UIAlertController *menu=[UIAlertController alertControllerWithTitle:@"打开项目" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    [menu addAction:[UIAlertAction actionWithTitle:@"从 ZIP / 压缩包导入" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){[self openArchivePicker];}]];
-    [menu addAction:[UIAlertAction actionWithTitle:@"选择源码及配置文件" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){[self openFilePicker];}]];
-    [menu addAction:[UIAlertAction actionWithTitle:@"从 App 内工程目录载入" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){dispatch_async(dispatch_get_main_queue(),^{[self loadDocumentsProject];});}]];
+    UIAlertController *menu=[UIAlertController alertControllerWithTitle:DXLoc(@"打开项目") message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    [menu addAction:[UIAlertAction actionWithTitle:DXLoc(@"从 ZIP / 压缩包导入") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){[self openArchivePicker];}]];
+    [menu addAction:[UIAlertAction actionWithTitle:DXLoc(@"选择源码及配置文件") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){[self openFilePicker];}]];
+    [menu addAction:[UIAlertAction actionWithTitle:DXLoc(@"从 App 内工程目录载入") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){dispatch_async(dispatch_get_main_queue(),^{[self loadDocumentsProject];});}]];
     [menu addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
     menu.popoverPresentationController.sourceView=host.view;
     menu.popoverPresentationController.sourceRect=CGRectMake(CGRectGetMidX(host.view.bounds),CGRectGetMidY(host.view.bounds),1,1);
@@ -378,7 +379,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     if(self.archiveHUD)return;
     UIView *view=[self importHost].navigationController.view?:[self importHost].view;
     MBProgressHUD *hud=[MBProgressHUD showHUDAddedTo:view animated:YES];self.archiveHUD=hud;
-    hud.removeFromSuperViewOnHide=YES;hud.label.font=[UIFont monospacedDigitSystemFontOfSize:12 weight:UIFontWeightMedium];hud.label.text=@"正在读取压缩包…";
+    hud.removeFromSuperViewOnHide=YES;hud.label.font=[UIFont monospacedDigitSystemFontOfSize:12 weight:UIFontWeightMedium];hud.label.text=DXLoc(@"正在读取压缩包…");
     [hud.button setTitle:@"取消" forState:UIControlStateNormal];[hud.button addTarget:self action:@selector(cancelArchive) forControlEvents:UIControlEventTouchUpInside];
 }
 - (void)hideArchiveHUD {[self.archiveHUD hideAnimated:YES];self.archiveHUD=nil;}
@@ -421,7 +422,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         NSError *error=nil;__block NSTimeInterval updated=0;
         BOOL ok=TMCExtractArchive([NSURL fileURLWithPath:input],[NSURL fileURLWithPath:expanded],password,progress,^(NSUInteger files,unsigned long long bytes){
             NSTimeInterval now=NSProcessInfo.processInfo.systemUptime;if(now-updated<.15)return;updated=now;
-            dispatch_async(dispatch_get_main_queue(),^{if(self.archiveProgress==progress)self.archiveHUD.label.text=[NSString stringWithFormat:@"%lu 个条目 · %@",(unsigned long)files,[NSByteCountFormatter stringFromByteCount:(long long)bytes countStyle:NSByteCountFormatterCountStyleFile]];});
+            dispatch_async(dispatch_get_main_queue(),^{if(self.archiveProgress==progress)self.archiveHUD.label.text=[NSString stringWithFormat:DXLoc(@"%lu 个条目 · %@"),(unsigned long)files,[NSByteCountFormatter stringFromByteCount:(long long)bytes countStyle:NSByteCountFormatterCountStyleFile]];});
         },&error);
         NSArray *projects=ok?TMCArchiveProjects(expanded,progress,&error):nil;
         dispatch_async(dispatch_get_main_queue(),^{
@@ -429,7 +430,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
             if(!projects){
                 [self hideArchiveHUD];
                 if([error.domain isEqual:@"TweakForgeArchive"]&&error.code==TMCArchivePassword){[self requestArchivePassword:password.length>0];return;}
-                self.importInProgress=NO;[self cleanupArchive];[self showImportMessage:error.localizedDescription?:@"压缩包识别失败"];return;
+                self.importInProgress=NO;[self cleanupArchive];[self showImportMessage:error.localizedDescription?:DXLoc(@"压缩包识别失败")];return;
             }
             if(projects.count==1){[self importArchiveProject:projects.firstObject];return;}
             [self hideArchiveHUD];
@@ -442,28 +443,28 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     });
 }
 - (void)requestArchivePassword:(BOOL)retry {
-    UIAlertController *alert=[UIAlertController alertControllerWithTitle:retry?@"请检查压缩包密码":@"压缩包需要密码" message:@"支持的加密格式将在本机使用此密码解压；密码不会保存。" preferredStyle:UIAlertControllerStyleAlert];
-    [alert addTextFieldWithConfigurationHandler:^(UITextField *field){field.secureTextEntry=YES;field.placeholder=@"压缩包密码";}];
+    UIAlertController *alert=[UIAlertController alertControllerWithTitle:retry?@"请检查压缩包密码":DXLoc(@"压缩包需要密码") message:DXLoc(@"支持的加密格式将在本机使用此密码解压；密码不会保存。") preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField *field){field.secureTextEntry=YES;field.placeholder=DXLoc(@"压缩包密码");}];
     [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action){self.importInProgress=NO;[self cleanupArchive];}]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"解压" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){NSString *password=alert.textFields.firstObject.text?:@"";[self afterImportPresentation:^{[self expandArchiveWithPassword:password];}];}]];
+    [alert addAction:[UIAlertAction actionWithTitle:DXLoc(@"解压") style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){NSString *password=alert.textFields.firstObject.text?:@"";[self afterImportPresentation:^{[self expandArchiveWithPassword:password];}];}]];
     [[self importHost] presentViewController:alert animated:YES completion:nil];
 }
 - (void)importArchiveProject:(NSDictionary *)project {
     NSString *name=project[@"name"];
     if([project[@"relative"] isEqual:@"压缩包根目录"]){name=self.archiveInputPath.lastPathComponent.stringByDeletingPathExtension;for(NSString *suffix in @[@"tar",@"tgz",@"tbz2",@"txz"])if([name.pathExtension.lowercaseString isEqual:suffix])name=name.stringByDeletingPathExtension;}
     self.archiveProjectName=name;
-    [self showArchiveHUD];self.archiveHUD.label.text=@"正在导入工程…";self.archiveHUD.button.hidden=YES;
+    [self showArchiveHUD];self.archiveHUD.label.text=DXLoc(@"正在导入工程…");self.archiveHUD.button.hidden=YES;
     self.importInProgress=NO;
     [self importURLs:@[[NSURL fileURLWithPath:project[@"root"] isDirectory:YES]]];
 }
 - (void)importURLs:(NSArray<NSURL *> *)urls {
-    if(!urls.count){[self showImportMessage:@"没有选中的文件或目录。"];return;}
+    if(!urls.count){[self showImportMessage:DXLoc(@"没有选中的文件或目录。")];return;}
     if(self.importInProgress)return;
     self.importInProgress=YES;
     NSString *projectName=self.archiveProjectName?:urls.firstObject.lastPathComponent.stringByDeletingPathExtension;
     NSMutableArray<NSURL *> *scoped=[NSMutableArray new];
     for(NSURL *url in urls){BOOL granted=[url startAccessingSecurityScopedResource];if(granted)[scoped addObject:url];}
-    self.console.text = @"正在复制工程文件…";
+    self.console.text = DXLoc(@"正在复制工程文件…");
     self.navigationItem.leftBarButtonItem.enabled = NO;
     self.navigationItem.rightBarButtonItem.enabled = NO;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -476,7 +477,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
             [coordinator coordinateReadingItemAtURL:url options:NSFileCoordinatorReadingWithoutChanges error:&coordinationError byAccessor:^(NSURL *readURL) {
                 BOOL directory = NO;
                 [NSFileManager.defaultManager fileExistsAtPath:readURL.path isDirectory:&directory];
-                if(directory&&urls.count!=1){copyError=[NSError errorWithDomain:@"TweakForgeImport" code:2 userInfo:@{NSLocalizedDescriptionKey:@"工程文件夹每次仅支持一个；源码文件支持多选。"}];return;}
+                if(directory&&urls.count!=1){copyError=[NSError errorWithDomain:@"TweakForgeImport" code:2 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"工程文件夹每次仅支持一个；源码文件支持多选。")}];return;}
                 if (directory && urls.count == 1) [NSFileManager.defaultManager copyItemAtPath:readURL.path toPath:dest error:&copyError];
                 else {
                     if (![NSFileManager.defaultManager createDirectoryAtPath:dest withIntermediateDirectories:YES attributes:nil error:&copyError]) return;
@@ -506,15 +507,15 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
             if (copyError) { [NSFileManager.defaultManager removeItemAtPath:dest error:nil];[self showImportMessage:[@"导入出错：" stringByAppendingString:copyError.localizedDescription]]; return; }
             NSUInteger logosCount = 0;
             for (NSString *name in sources) if ([name.pathExtension.lowercaseString isEqualToString:@"xm"]) logosCount++;
-            if (!configuredSources.count) { [NSFileManager.defaultManager removeItemAtPath:dest error:nil];[self showImportMessage:@"没有找到可编译的源码，请检查 MobileCompiler.json 中的 sources 配置。"]; return; }
+            if (!configuredSources.count) { [NSFileManager.defaultManager removeItemAtPath:dest error:nil];[self showImportMessage:DXLoc(@"没有找到可编译的源码，请检查 MobileCompiler.json 中的 sources 配置。")]; return; }
             [sources sortUsingSelector:@selector(compare:)];
             self.importedSource = configuredSources.firstObject;
             self.importedProject = dest;
             [NSUserDefaults.standardUserDefaults setObject:dest.lastPathComponent forKey:@"ImportedProject"];
             [NSUserDefaults.standardUserDefaults setObject:[self.importedSource substringFromIndex:documents.length + 1] forKey:@"ImportedSourceRelativePath"];
             BOOL control = [files containsObject:@"control"];
-            NSString *metadata = (control && plists.count == 1) ? @"将使用导入的 control 和过滤 plist。" : @"未同时提供 control 与过滤 plist，运行时将提示补齐；仅源码测试可使用默认测试元数据。";
-            [self showImportMessage:[NSString stringWithFormat:@"已导入 %lu 个源码：%@\n%@\n%@", (unsigned long)configuredSources.count, [config[@"name"] isKindOfClass:NSString.class] ? config[@"name"] : [sources componentsJoinedByString:@", "], metadata, self.hasBuilt ? @"已有构建正在执行。" : @"点击运行开始本机构建。"]];
+            NSString *metadata = (control && plists.count == 1) ? @"将使用导入的 control 和过滤 plist。" : DXLoc(@"未同时提供 control 与过滤 plist，运行时将提示补齐；仅源码测试可使用默认测试元数据。");
+            [self showImportMessage:[NSString stringWithFormat:DXLoc(@"已导入 %lu 个源码：%@\n%@\n%@"), (unsigned long)configuredSources.count, [config[@"name"] isKindOfClass:NSString.class] ? config[@"name"] : [sources componentsJoinedByString:@", "], metadata, self.hasBuilt ? @"已有构建正在执行。" : DXLoc(@"点击运行开始本机构建。")]];
             if(self.importCompletion){self.pendingImportedProject=dest;[self finishPendingImport];}
             if ([NSProcessInfo.processInfo.arguments containsObject:@"--self-test-project"]) [self runProof];
         });
@@ -545,8 +546,8 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         if (path && [NSFileManager.defaultManager fileExistsAtPath:path]) [files addObject:[NSURL fileURLWithPath:path]];
     }
     if (files.count == 0) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"暂无可导出文件" message:@"请先点击运行。构建完成后，这里会打开系统分享菜单，可保存结果或日志到“文件”。" preferredStyle:UIAlertControllerStyleAlert];
-        [alert addAction:[UIAlertAction actionWithTitle:@"知道了" style:UIAlertActionStyleDefault handler:nil]];
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:DXLoc(@"暂无可导出文件") message:DXLoc(@"请先点击运行。构建完成后，这里会打开系统分享菜单，可保存结果或日志到“文件”。") preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction actionWithTitle:DXLoc(@"知道了") style:UIAlertActionStyleDefault handler:nil]];
         [self presentViewController:alert animated:YES completion:nil];
         return;
     }
@@ -556,14 +557,14 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
 }
 - (void)runProof {
     if (TMCBuildRunning) {
-        self.console.text = @"已有构建正在执行，请等待当前任务完成。";
+        self.console.text = DXLoc(@"已有构建正在执行，请等待当前任务完成。");
         return;
     }
     self.cancelRequested=NO;TMCBuildRunning = YES;
     self.hasBuilt = YES;
     self.lastPackage = nil;
     TFScreenAwakeSet(@"build",YES);
-    self.console.text = @"执行 IPA 内嵌编译器…\n";
+    self.console.text = DXLoc(@"执行 IPA 内嵌编译器…\n");
     self.navigationItem.rightBarButtonItem.enabled = NO;
     self.navigationItem.leftBarButtonItem.enabled = NO;
     ((UIBarButtonItem *)self.toolbarItems.firstObject).enabled = NO;
@@ -593,7 +594,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         TMCLog(log,"BUILD STARTED — %s\n",NSDate.date.description.UTF8String);
         TMCLog(log,"CACHE POLICY — %s\n",self.checkpointCacheDirectory?"clean rebuild; current project and conversation only":"manual build checkpoint policy");
         FILE *input = fopen("/dev/null", "r");
-        if(!log||!input){if(log)fclose(log);if(input)fclose(input);NSDictionary *failure=@{@"success":@NO,@"commands":@[],@"packageError":@"创建构建日志失败，请检查可用存储空间"};[[NSJSONSerialization dataWithJSONObject:failure options:0 error:nil] writeToFile:[build stringByAppendingPathComponent:@"report.json"] atomically:YES];dispatch_async(dispatch_get_main_queue(),^{self.hasBuilt=NO;TMCBuildRunning=NO;TFScreenAwakeSet(@"build",NO);self.console.text=failure[@"packageError"];if(self.buildCompletion)self.buildCompletion(NO);});return;}
+        if(!log||!input){if(log)fclose(log);if(input)fclose(input);NSDictionary *failure=@{@"success":@NO,@"commands":@[],@"packageError":DXLoc(@"创建构建日志失败，请检查可用存储空间")};[[NSJSONSerialization dataWithJSONObject:failure options:0 error:nil] writeToFile:[build stringByAppendingPathComponent:@"report.json"] atomically:YES];dispatch_async(dispatch_get_main_queue(),^{self.hasBuilt=NO;TMCBuildRunning=NO;TFScreenAwakeSet(@"build",NO);self.console.text=failure[@"packageError"];if(self.buildCompletion)self.buildCompletion(NO);});return;}
         initializeEnvironment();
         setenv("SYSROOT", NSBundle.mainBundle.bundlePath.fileSystemRepresentation, 1);
         NSString *perlLib = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Perl"];
@@ -639,7 +640,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
                 fflush(log); dispatch_async(dispatch_get_main_queue(), ^{
                 self.hasBuilt = NO; TMCBuildRunning = NO;
                 if (self.buildCompletion) self.buildCompletion(NO);
-                self.console.text = @"Logos 执行失败，请点击导出结果，保存 build.log 以便排查。";
+                self.console.text = DXLoc(@"Logos 执行失败，请点击导出结果，保存 build.log 以便排查。");
                 TFScreenAwakeSet(@"build",NO);
                 self.navigationItem.leftBarButtonItem.enabled = YES;
                 ((UIBarButtonItem *)self.toolbarItems.firstObject).enabled = YES;
@@ -678,7 +679,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         if(multipleSchemes&&[config[@"package"] boolValue]){debName=TMCVariantOutputFilename(debPattern,@"deb",namingContext,packageSchemes,packageScheme,&namingError);}
         if(!dylibName||!debName){
             TMCLog(log,"output naming error: %s\n",namingError.localizedDescription.UTF8String);TMCLog(log,"BUILD FAILED — output naming; duration=%.2fs\n",NSProcessInfo.processInfo.systemUptime-startedUptime);fflush(log);fclose(input);fclose(log);
-            NSDictionary *failure=@{@"execution":@"embedded iOS frameworks",@"success":@NO,@"commands":@[],@"outputNamingError":namingError.localizedDescription?:@"文件名模板有误",@"startedAt":@(startedAt),@"finishedAt":@(NSDate.date.timeIntervalSince1970),@"durationSeconds":@(NSProcessInfo.processInfo.systemUptime-startedUptime)};
+            NSDictionary *failure=@{@"execution":@"embedded iOS frameworks",@"success":@NO,@"commands":@[],@"outputNamingError":namingError.localizedDescription?:DXLoc(@"文件名模板有误"),@"startedAt":@(startedAt),@"finishedAt":@(NSDate.date.timeIntervalSince1970),@"durationSeconds":@(NSProcessInfo.processInfo.systemUptime-startedUptime)};
             [[NSJSONSerialization dataWithJSONObject:failure options:NSJSONWritingPrettyPrinted error:nil] writeToFile:[build stringByAppendingPathComponent:@"report.json"] atomically:YES];
             dispatch_async(dispatch_get_main_queue(),^{self.hasBuilt=NO;TMCBuildRunning=NO;TFScreenAwakeSet(@"build",NO);self.console.text=namingError.localizedDescription;self.navigationItem.rightBarButtonItem.enabled=YES;self.navigationItem.leftBarButtonItem.enabled=YES;((UIBarButtonItem *)self.toolbarItems.firstObject).enabled=YES;if(self.buildCompletion)self.buildCompletion(NO);});return;
         }
@@ -745,7 +746,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
             if(self.cancelRequested){compileFailed=YES;TMCLog(log,"BUILD CANCELLED at command boundary\n");break;}
             if ([arguments.firstObject isEqualToString:@"ld64.lld"] && compileFailed) break;
             NSUInteger progress = results.count;
-            NSString *label = progress < compileSources.count ? [NSString stringWithFormat:@"编译 %lu/%lu：%@", (unsigned long)progress + 1, (unsigned long)compileSources.count, compileSources[progress]] : @"正在链接所有对象…";
+            NSString *label = progress < compileSources.count ? [NSString stringWithFormat:DXLoc(@"编译 %lu/%lu：%@"), (unsigned long)progress + 1, (unsigned long)compileSources.count, compileSources[progress]] : DXLoc(@"正在链接所有对象…");
             dispatch_async(dispatch_get_main_queue(), ^{ self.console.text = label;if(self.buildProgress)self.buildProgress(label,(double)progress/MAX(1,commands.count)); });
             NSString *command = [arguments componentsJoinedByString:@" "];
             TMCLog(log, "\n$ %s\n", command.UTF8String); fflush(log);
@@ -790,30 +791,30 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
             NSDictionary *context=TMCNamingContextForScheme(namingContext,scheme);
             NSError *error=nil;NSString *variantDylib=TMCVariantOutputFilename(dylibPattern,@"dylib",context,packageSchemes,scheme,&error),*variantDeb=TMCVariantOutputFilename(debPattern,@"deb",context,packageSchemes,scheme,&error);
             if(![scheme isEqual:packageScheme]){NSString *cache=[build stringByAppendingPathComponent:@".package-link-cache"];[NSFileManager.defaultManager createDirectoryAtPath:cache withIntermediateDirectories:YES attributes:nil error:nil];variantDylib=[@".package-link-cache" stringByAppendingPathComponent:[scheme stringByAppendingPathExtension:@"dylib"]];}else variantDylib=dylibName;
-            if(!variantDylib||!variantDeb){allPassed=NO;report[@"outputNamingError"]=error.localizedDescription?:@"文件名无效";break;}
+            if(!variantDylib||!variantDeb){allPassed=NO;report[@"outputNamingError"]=error.localizedDescription?:DXLoc(@"文件名无效");break;}
             TMCLog(log,"\n打包目标：%s\n",scheme.UTF8String);
             NSMutableArray *variantLink=[TMCPackageLinkArguments(link, scheme, vendorFrameworks, tweakName) mutableCopy];
             if(![scheme isEqual:packageScheme]){NSUInteger pathIndex=[variantLink indexOfObject:@"-rpath"],installIndex=[variantLink indexOfObject:@"-install_name"],outputIndex=[variantLink indexOfObject:@"-o"];
              variantLink[pathIndex+1]=[scheme isEqual:@"rootless"]?@"/var/jb/Library/Frameworks":[scheme isEqual:@"roothide"]?@"@loader_path/.jbroot/Library/Frameworks":@"/Library/Frameworks";
              variantLink[installIndex+1]=[NSString stringWithFormat:[scheme isEqual:@"roothide"]?@"@loader_path/.jbroot/Library/MobileSubstrate/DynamicLibraries/%@.dylib":@"@rpath/%@.dylib",tweakName];variantLink[outputIndex+1]=[build stringByAppendingPathComponent:variantDylib];
              TMCLog(log,"$ %s\n",[variantLink componentsJoinedByString:@" "].UTF8String);int status=runTool(variantLink,input,log);TMCLog(log,"exit=%d\n",status);[results addObject:@{@"command":[variantLink componentsJoinedByString:@" "],@"exit":@(status),@"stage":[@"link-" stringByAppendingString:scheme],@"source":@"all objects"}];if(status){allPassed=NO;report[@"packageError"]=[@"链接失败：" stringByAppendingString:scheme];break;}}
-            if(![scheme isEqual:packageScheme]&&stripSymbols&&!TMCProcessReleaseSymbols(variantLink,variantDylib,scheme,build,input,log,releaseIndexes,symbolProcessing,&error)){allPassed=NO;report[@"packageError"]=error.localizedDescription?:@"发布裁剪失败";[NSFileManager.defaultManager removeItemAtPath:[build stringByAppendingPathComponent:variantDylib] error:nil];break;}
+            if(![scheme isEqual:packageScheme]&&stripSymbols&&!TMCProcessReleaseSymbols(variantLink,variantDylib,scheme,build,input,log,releaseIndexes,symbolProcessing,&error)){allPassed=NO;report[@"packageError"]=error.localizedDescription?:DXLoc(@"发布裁剪失败");[NSFileManager.defaultManager removeItemAtPath:[build stringByAppendingPathComponent:variantDylib] error:nil];break;}
             NSData *dylib=[NSData dataWithContentsOfFile:[build stringByAppendingPathComponent:variantDylib]];
             if (!TMCValidateDylibSignature(dylib, &error)) { allPassed=NO; report[@"packageError"]=error.localizedDescription; TMCLog(log,"签名验证失败：%s\n",error.localizedDescription.UTF8String); [NSFileManager.defaultManager removeItemAtPath:[build stringByAppendingPathComponent:variantDylib] error:nil]; break; }
             if ([scheme isEqual:@"roothide"] && !TMCNativeRootHideImage(dylib, &error)) { allPassed=NO; report[@"packageError"]=error.localizedDescription; TMCLog(log,"package error: %s\n",error.localizedDescription.UTF8String); break; }
             if(dylib&&[scheme isEqual:packageScheme])[namedArtifacts addObject:variantDylib];NSData *deb=nil;
             if(!customMetadata)deb=TMCDebPackageForProject(dylib,tweakName,@"com.example.target",scheme,projectDirectory,config,&error);
             else if(hasControl&&projectPlists.count==1){NSString *control=[NSString stringWithContentsOfFile:controlPath encoding:NSUTF8StringEncoding error:&error];NSData *filter=[NSData dataWithContentsOfFile:[projectDirectory stringByAppendingPathComponent:projectPlists.firstObject] options:0 error:&error];if(control&&filter){NSString *adjusted=TMCControlForScheme(control,scheme);deb=TMCDebPackageWithResources(dylib,tweakName,filter,adjusted,projectDirectory,scheme,config,&error);[adjusted writeToFile:[build stringByAppendingPathComponent:multipleSchemes?[@"control-" stringByAppendingString:scheme]:@"control"] atomically:YES encoding:NSUTF8StringEncoding error:nil];[filter writeToFile:[build stringByAppendingPathComponent:@"filter.plist"] atomically:YES];}}
-            else error=[NSError errorWithDomain:@"Compiler" code:5 userInfo:@{NSLocalizedDescriptionKey:@"请在项目设置填写目标 Bundle ID，并保存 control 和过滤 plist 后构建。"}];
+            else error=[NSError errorWithDomain:@"Compiler" code:5 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"请在项目设置填写目标 Bundle ID，并保存 control 和过滤 plist 后构建。")}];
             NSString *path=[build stringByAppendingPathComponent:variantDeb];BOOL success=deb&&[deb writeToFile:path options:NSDataWritingAtomic error:&error];[variantReports addObject:@{@"scheme":scheme,@"success":@(success),@"dylib":variantDylib,@"deb":variantDeb,@"signatureVerified":@YES}];
             if(success){self.lastPackage=path;NSDictionary *entry=@{@"name":variantDeb,@"bytes":@(deb.length),@"scheme":scheme};[packages addObject:entry];[namedArtifacts addObject:variantDeb];TMCLog(log,"Debian package generated: %s (%lu bytes)\n",path.UTF8String,(unsigned long)deb.length);}
-            else{allPassed=NO;report[@"packageError"]=error.localizedDescription?:@"打包失败";TMCLog(log,"package error: %s\n",[report[@"packageError"] UTF8String]);break;}
+            else{allPassed=NO;report[@"packageError"]=error.localizedDescription?:DXLoc(@"打包失败");TMCLog(log,"package error: %s\n",[report[@"packageError"] UTF8String]);break;}
           }
           report[@"success"]=@(allPassed&&packages.count==packageSchemes.count&&packages.count>0);
         }
         if(packages.count)report[@"package"]=packages.firstObject;report[@"packages"]=packages;report[@"variants"]=variantReports;report[@"packageSchemes"]=packageSchemes;
         report[@"outputNaming"]=@{@"debPattern":debPattern,@"dylibPattern":dylibPattern,@"context":namingContext,@"dylib":dylibName,@"deb":debName};
-        if(self.cancelRequested){report[@"success"]=@NO;report[@"packageError"]=@"构建已取消；保留检查点供重新审批后续跑。";}
+        if(self.cancelRequested){report[@"success"]=@NO;report[@"packageError"]=DXLoc(@"构建已取消；保留检查点供重新审批后续跑。");}
         report[@"cancelled"]=@(self.cancelRequested);report[@"checkpoint"]=@"checkpoint.json";
         report[@"provenance"]=provenance;
         report[@"runtimeVerified"]=@NO;report[@"sdkSettings"]=sdkSettings;
@@ -827,7 +828,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         TMCLog(log,"运行验证：尚未在宿主中验证；构建通过不代表运行无误。\n");
         BOOL exportDylib=[config[@"exportDylib"] boolValue];report[@"exportDylib"]=@(exportDylib);
         if(!exportDylib&&shouldPackage&&[report[@"success"] boolValue]){for(NSString *name in [namedArtifacts copy])if([name.pathExtension isEqual:@"dylib"]){[NSFileManager.defaultManager removeItemAtPath:[build stringByAppendingPathComponent:name] error:nil];[namedArtifacts removeObject:name];}TMCLog(log,"仅导出 DEB：动态库已包含在安装包中。\n");}
-        if(!exportDylib&&!shouldPackage){report[@"success"]=@NO;report[@"packageError"]=@"请在构建设置至少勾选 dylib 或 deb。";for(NSString *name in [namedArtifacts copy]){[NSFileManager.defaultManager removeItemAtPath:[build stringByAppendingPathComponent:name] error:nil];}[namedArtifacts removeAllObjects];}
+        if(!exportDylib&&!shouldPackage){report[@"success"]=@NO;report[@"packageError"]=DXLoc(@"请在构建设置至少勾选 dylib 或 deb。");for(NSString *name in [namedArtifacts copy]){[NSFileManager.defaultManager removeItemAtPath:[build stringByAppendingPathComponent:name] error:nil];}[namedArtifacts removeAllObjects];}
         report[@"namedArtifacts"]=namedArtifacts;
         report[@"startedAt"]=@(startedAt);
         report[@"finishedAt"]=@(NSDate.date.timeIntervalSince1970);
@@ -842,7 +843,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
         fclose(input); fclose(log);
         dispatch_async(dispatch_get_main_queue(), ^{
             TFScreenAwakeSet(@"build",NO);
-            self.console.text = [NSString stringWithFormat:@"%@ · %lu 个源码\n日志与产物已保存，可导出完整文件。", [report[@"success"] boolValue] ? @"构建成功" : @"构建失败", (unsigned long)projectSources.count];
+            self.console.text = [NSString stringWithFormat:DXLoc(@"%@ · %lu 个源码\n日志与产物已保存，可导出完整文件。"), [report[@"success"] boolValue] ? @"构建成功" : @"构建失败", (unsigned long)projectSources.count];
             self.navigationItem.rightBarButtonItem.enabled = YES;
             self.navigationItem.leftBarButtonItem.enabled = YES;
             ((UIBarButtonItem *)self.toolbarItems.firstObject).enabled = YES;
@@ -873,7 +874,7 @@ static NSArray<NSString *> *sourcePaths(NSString *root) {
     NSString *documents=NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject;
     for(NSString *name in @[@"import.log",@"picker-test.json"])[NSFileManager.defaultManager removeItemAtPath:[documents stringByAppendingPathComponent:name] error:nil];
     // Only unreported builds from earlier processes are marked interrupted.
-    for(NSString *entry in [NSFileManager.defaultManager contentsOfDirectoryAtPath:documents error:nil])if([entry hasPrefix:@"Build-"]){NSString *path=[documents stringByAppendingPathComponent:entry],*marker=[path stringByAppendingPathComponent:@".build-in-progress.json"],*report=[path stringByAppendingPathComponent:@"report.json"];if([NSFileManager.defaultManager fileExistsAtPath:marker]&&![NSFileManager.defaultManager fileExistsAtPath:report]){NSDictionary *interrupted=@{@"success":@NO,@"commands":@[],@"interrupted":@YES,@"packageError":@"上次构建被系统或应用退出中断，请重新构建。原始日志已保留。"};[[NSJSONSerialization dataWithJSONObject:interrupted options:0 error:nil] writeToFile:report atomically:YES];}}
+    for(NSString *entry in [NSFileManager.defaultManager contentsOfDirectoryAtPath:documents error:nil])if([entry hasPrefix:@"Build-"]){NSString *path=[documents stringByAppendingPathComponent:entry],*marker=[path stringByAppendingPathComponent:@".build-in-progress.json"],*report=[path stringByAppendingPathComponent:@"report.json"];if([NSFileManager.defaultManager fileExistsAtPath:marker]&&![NSFileManager.defaultManager fileExistsAtPath:report]){NSDictionary *interrupted=@{@"success":@NO,@"commands":@[],@"interrupted":@YES,@"packageError":DXLoc(@"上次构建被系统或应用退出中断，请重新构建。原始日志已保留。")};[[NSJSONSerialization dataWithJSONObject:interrupted options:0 error:nil] writeToFile:report atomically:YES];}}
     BOOL testing = [NSProcessInfo.processInfo.arguments containsObject:@"--self-test"] || [NSProcessInfo.processInfo.arguments containsObject:@"--self-test-project"];
     self.window.rootViewController = testing ? [[TMCNavigationController alloc] initWithRootViewController:[CompilerController new]] : TMCStudioRoot();
 #if TARGET_OS_SIMULATOR

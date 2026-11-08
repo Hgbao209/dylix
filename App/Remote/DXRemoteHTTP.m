@@ -1,4 +1,5 @@
 #import <fcntl.h>
+#import "../DylixI18n.h"
 #import <unistd.h>
 #import <sys/stat.h>
 #import "DXRemoteHTTP.h"
@@ -56,12 +57,12 @@ NSDictionary *DXRemoteParseRequest(NSData *bytes,BOOL *complete,NSInteger *failu
 @implementation DXRemoteHTTP
 - (instancetype)initWithQueue:(dispatch_queue_t)queue{if((self=[super init])){_queue=queue;_peers=[NSMutableSet new];}return self;}
 - (BOOL)startAddress:(NSString *)address port:(NSUInteger)port error:(NSError **)error{
- [self stop];struct in_addr ip;if(!port||port<1024||port>65535||inet_pton(AF_INET,address.UTF8String,&ip)!=1){if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:1 userInfo:@{NSLocalizedDescriptionKey:@"请使用有效的局域网 IPv4 和 1024–65535 端口"}];return NO;}
+ [self stop];struct in_addr ip;if(!port||port<1024||port>65535||inet_pton(AF_INET,address.UTF8String,&ip)!=1){if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:1 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"请使用有效的局域网 IPv4 和 1024–65535 端口")}];return NO;}
  SecIdentityRef identity=self.tlsIdentity;
  nw_parameters_t parameters=identity?nw_parameters_create_secure_tcp(^(nw_protocol_options_t options){sec_protocol_options_t security=nw_tls_copy_sec_protocol_options(options);sec_protocol_options_set_min_tls_protocol_version(security,tls_protocol_version_TLSv12);sec_protocol_options_set_local_identity(security,sec_identity_create(identity));sec_protocol_options_add_tls_application_protocol(security,"http/1.1");},NW_PARAMETERS_DEFAULT_CONFIGURATION):nw_parameters_create_secure_tcp(NW_PARAMETERS_DISABLE_PROTOCOL,NW_PARAMETERS_DEFAULT_CONFIGURATION);
  nw_parameters_set_local_endpoint(parameters,nw_endpoint_create_host(address.UTF8String,[[NSString stringWithFormat:@"%lu",(unsigned long)port] UTF8String]));
  nw_parameters_set_include_peer_to_peer(parameters,false);
- nw_listener_t listener=nw_listener_create(parameters);if(!listener){if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:2 userInfo:@{NSLocalizedDescriptionKey:@"创建网络监听失败"}];return NO;}
+ nw_listener_t listener=nw_listener_create(parameters);if(!listener){if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:2 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"创建网络监听失败")}];return NO;}
  self.listener=listener;self.origin=[NSString stringWithFormat:@"%@://%@:%lu",identity?@"https":@"http",address,(unsigned long)port];NSUInteger generation=++self.generation;__weak typeof(self) weak=self;
  nw_listener_set_queue(listener,self.queue);
  nw_listener_set_state_changed_handler(listener,^(nw_listener_state_t state,nw_error_t failure){
@@ -86,16 +87,16 @@ NSDictionary *DXRemoteParseRequest(NSData *bytes,BOOL *complete,NSInteger *failu
   DXRemoteHTTP *s=weak;if(!s||peer.finished)return;
   if(content)dispatch_data_apply(content,^bool(dispatch_data_t region,size_t offset,const void *bytes,size_t size){[peer.bytes appendBytes:bytes length:size];return true;});
   BOOL complete=NO;NSInteger failure=0;NSDictionary *request=DXRemoteParseRequest(peer.bytes,&complete,&failure);
-  if(failure){[s send:DXRemoteResponse(failure,@{@"error":@{@"code":@"invalid_http",@"message":@"请求格式或大小超出允许范围"}}) peer:peer head:NO];return;}
+  if(failure){[s send:DXRemoteResponse(failure,@{@"error":@{@"code":@"invalid_http",@"message":DXLoc(@"请求格式或大小超出允许范围")}}) peer:peer head:NO];return;}
   if(complete){
    NSString *host=request[@"headers"][@"host"],*origin=request[@"headers"][@"origin"];
    NSString *scheme=[s.origin hasPrefix:@"https://"]?@"https://":@"http://";
    if(![[scheme stringByAppendingString:host] isEqual:s.origin]||(origin&&![origin isEqual:s.origin])){
-    [s send:DXRemoteResponse(403,@{@"error":@{@"code":@"origin_rejected",@"message":@"请使用手机显示的访问地址"}}) peer:peer head:NO];return;
+    [s send:DXRemoteResponse(403,@{@"error":@{@"code":@"origin_rejected",@"message":DXLoc(@"请使用手机显示的访问地址")}}) peer:peer head:NO];return;
    }
    NSMutableDictionary *r=[request mutableCopy];r[@"peer"]=address;
    if(s.asyncHandler){NSUInteger generation=s.generation;s.asyncHandler(r,^(NSDictionary *response){dispatch_async(s.queue,^{if(generation==s.generation&&!peer.finished)[s send:response peer:peer head:[request[@"method"] isEqual:@"HEAD"]];});});return;}
-   NSDictionary *response=s.handler?s.handler(r):DXRemoteResponse(503,@{@"error":@{@"code":@"unavailable",@"message":@"服务未就绪"}});
+   NSDictionary *response=s.handler?s.handler(r):DXRemoteResponse(503,@{@"error":@{@"code":@"unavailable",@"message":DXLoc(@"服务未就绪")}});
    [s send:response peer:peer head:[request[@"method"] isEqual:@"HEAD"]];return;
   }
   if(eof||error){[s close:peer];return;}[s read:peer peer:address];
@@ -116,7 +117,7 @@ NSDictionary *DXRemoteParseRequest(NSData *bytes,BOOL *complete,NSInteger *failu
  if(peer.finished)return;
  NSData *body=response[@"body"]?:NSData.data;unsigned long long length=body.length;
  NSString *filePath=response[@"filePath"];
- if(filePath){int fd=open(filePath.fileSystemRepresentation,O_RDONLY|O_NOFOLLOW);struct stat st;if(fd<0||fstat(fd,&st)!=0||!S_ISREG(st.st_mode)||st.st_size<0){if(fd>=0)close(fd);[self send:DXRemoteResponse(404,@{@"error":@"文件已不存在或暂不可读取"}) peer:peer head:head];return;}peer.file=[[NSFileHandle alloc]initWithFileDescriptor:fd closeOnDealloc:YES];length=(unsigned long long)st.st_size;peer.remaining=length;}
+ if(filePath){int fd=open(filePath.fileSystemRepresentation,O_RDONLY|O_NOFOLLOW);struct stat st;if(fd<0||fstat(fd,&st)!=0||!S_ISREG(st.st_mode)||st.st_size<0){if(fd>=0)close(fd);[self send:DXRemoteResponse(404,@{@"error":DXLoc(@"文件已不存在或暂不可读取")}) peer:peer head:head];return;}peer.file=[[NSFileHandle alloc]initWithFileDescriptor:fd closeOnDealloc:YES];length=(unsigned long long)st.st_size;peer.remaining=length;}
  peer.responding=YES;[self armSendTimeout:peer];
  NSMutableString *headers=[NSMutableString stringWithFormat:@"HTTP/1.1 %ld Response\r\nContent-Type: %@\r\nContent-Length: %llu\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer\r\nPermissions-Policy: camera=(), microphone=(), geolocation=()\r\nContent-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval'; worker-src 'self' blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'\r\n",(long)[response[@"status"] integerValue],response[@"type"]?:@"application/octet-stream",length];
  for(NSString *name in response[@"headers"])[headers appendFormat:@"%@: %@\r\n",name,response[@"headers"][name]];

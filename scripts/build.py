@@ -217,7 +217,9 @@ share_info = {
 share_cmd=['xcrun','--sdk',sdk,'clang','-arch',arch,'-isysroot',sysroot,
  '-mios-simulator-version-min=15.0' if args.simulator else '-miphoneos-version-min=15.0',
  '-fobjc-arc','-fapplication-extension','-framework','UIKit','-framework','Foundation','-framework','UniformTypeIdentifiers',
- '-Wl,-e,_NSExtensionMain',str(ROOT / 'ShareExtension/ShareViewController.m'),str(ROOT / 'ShareExtension/TFShareLauncher.m'),str(ROOT / 'App/Incoming/TFShareTransfer.m'),str(ROOT / 'App/Incoming/TFShareGroups.m'),'-o',str(share / 'TweakForgeShare')]
+ '-Wl,-e,_NSExtensionMain',str(ROOT / 'ShareExtension/ShareViewController.m'),str(ROOT / 'ShareExtension/TFShareLauncher.m'),str(ROOT / 'App/Incoming/TFShareTransfer.m'),str(ROOT / 'App/Incoming/TFShareGroups.m'),str(ROOT / 'App/DylixI18n.m'),'-o',str(share / 'TweakForgeShare')]
+for locale in ('vi.lproj', 'en.lproj', 'zh-Hans.lproj'):
+    shutil.copytree(ROOT / 'Resources' / locale, share / locale, dirs_exist_ok=True)
 if args.sdk_root:
     share_cmd.append('-F' + str(pathlib.Path(sysroot) / 'System/Library/SubFrameworks'))
 if args.share_profile:

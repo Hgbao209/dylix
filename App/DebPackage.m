@@ -1,4 +1,5 @@
 #import "DebPackage.h"
+#import "DylixI18n.h"
 #import "../Vendor/libarchive-headers/archive.h"
 #import "../Vendor/libarchive-headers/archive_entry.h"
 
@@ -72,7 +73,7 @@ static NSData *gzipTar(NSData *tar, NSError **error) {
         if (ok) ok = archive_write_finish_entry(writer) == ARCHIVE_OK;
         if (ok) ok = archive_write_close(writer) == ARCHIVE_OK;
     }
-    if (!ok && error) *error = [NSError errorWithDomain:@"Compiler" code:7 userInfo:@{NSLocalizedDescriptionKey:@"DEB gzip 压缩失败，未生成安装包"}];
+    if (!ok && error) *error = [NSError errorWithDomain:@"Compiler" code:7 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"DEB gzip 压缩失败，未生成安装包")}];
     if (entry) archive_entry_free(entry);
     if (writer) archive_write_free(writer);
     return ok ? compressed : nil;
@@ -103,12 +104,12 @@ NSData *TMCDebPackageWithMetadata(NSData *dylib, NSString *name, NSData *filterP
 NSData *TMCDebPackageWithResources(NSData *dylib, NSString *name, NSData *filterPlist, NSString *control, NSString *root, NSString *scheme, NSDictionary *config, NSError **error) {
     NSCharacterSet *bad = [[NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+-."] invertedSet];
     if (!dylib.length || !name.length || name.length > 64 || [name rangeOfCharacterFromSet:bad].location != NSNotFound) {
-        if (error) *error = [NSError errorWithDomain:@"Compiler" code:1 userInfo:@{NSLocalizedDescriptionKey: @"包名或产物无效"}];
+        if (error) *error = [NSError errorWithDomain:@"Compiler" code:1 userInfo:@{NSLocalizedDescriptionKey: DXLoc(@"包名或产物无效")}];
         return nil;
     }
     id filter = filterPlist ? [NSPropertyListSerialization propertyListWithData:filterPlist options:NSPropertyListImmutable format:nil error:error] : nil;
     if (![filter isKindOfClass:NSDictionary.class] || ![filter[@"Filter"] isKindOfClass:NSDictionary.class] || ![filter[@"Filter"] count]) {
-        if (error) *error = [NSError errorWithDomain:@"Compiler" code:2 userInfo:@{NSLocalizedDescriptionKey: @"过滤 plist 需要非空的 Filter 字典"}];
+        if (error) *error = [NSError errorWithDomain:@"Compiler" code:2 userInfo:@{NSLocalizedDescriptionKey: DXLoc(@"过滤 plist 需要非空的 Filter 字典")}];
         return nil;
     }
     control = [control stringByReplacingOccurrencesOfString:@"\r\n" withString:@"\n"];
@@ -126,7 +127,7 @@ NSData *TMCDebPackageWithResources(NSData *dylib, NSString *name, NSData *filter
         }
     }
     if (![@[@"iphoneos-arm64",@"iphoneos-arm",@"iphoneos-arm64e"] containsObject:fields[@"architecture"]]) {
-        if (error) *error = [NSError errorWithDomain:@"Compiler" code:4 userInfo:@{NSLocalizedDescriptionKey: @"Architecture 需为 iphoneos-arm64（无根）、iphoneos-arm（有根）或 iphoneos-arm64e（隐根）"}];
+        if (error) *error = [NSError errorWithDomain:@"Compiler" code:4 userInfo:@{NSLocalizedDescriptionKey: DXLoc(@"Architecture 需为 iphoneos-arm64（无根）、iphoneos-arm（有根）或 iphoneos-arm64e（隐根）")}];
         return nil;
     }
     if (![control hasSuffix:@"\n"]) control = [control stringByAppendingString:@"\n"];
@@ -146,9 +147,9 @@ NSData *TMCDebPackageWithResources(NSData *dylib, NSString *name, NSData *filter
       for(NSString *relative in enumerator){NSDictionary *a=[NSFileManager.defaultManager attributesOfItemAtPath:[layout stringByAppendingPathComponent:relative] error:nil];if([a[NSFileType] isEqual:NSFileTypeDirectory])continue;[entries addObject:@{@"source":[@"layout" stringByAppendingPathComponent:relative],@"destination":relative}];}
     }
     id resources=config[@"resources"];
-    if(resources&&![resources isKindOfClass:NSArray.class]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:@"resources 应为 source/destination 对象数组"}];return nil;}
+    if(resources&&![resources isKindOfClass:NSArray.class]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"resources 应为 source/destination 对象数组")}];return nil;}
     for(id resource in resources){
-      if(![resource isKindOfClass:NSDictionary.class]||![resource[@"source"] isKindOfClass:NSString.class]||![resource[@"destination"] isKindOfClass:NSString.class]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:@"资源需明确 source 和 destination"}];return nil;}
+      if(![resource isKindOfClass:NSDictionary.class]||![resource[@"source"] isKindOfClass:NSString.class]||![resource[@"destination"] isKindOfClass:NSString.class]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"资源需明确 source 和 destination")}];return nil;}
       NSString *source=resource[@"source"],*target=resource[@"destination"],*full=[root stringByAppendingPathComponent:source];BOOL directory=NO;
       if(![NSFileManager.defaultManager fileExistsAtPath:full isDirectory:&directory]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:[@"资源不存在：" stringByAppendingString:source]}];return nil;}
       if(directory){for(NSString *relative in [NSFileManager.defaultManager enumeratorAtPath:full]){NSString *f=[full stringByAppendingPathComponent:relative];if(![[NSFileManager.defaultManager attributesOfItemAtPath:f error:nil][NSFileType] isEqual:NSFileTypeDirectory])[entries addObject:@{@"source":[source stringByAppendingPathComponent:relative],@"destination":[target stringByAppendingPathComponent:relative]}];}}
@@ -158,9 +159,9 @@ NSData *TMCDebPackageWithResources(NSData *dylib, NSString *name, NSData *filter
     for(NSDictionary *entry in entries){NSString *source=entry[@"source"],*destination=entry[@"destination"],*full=[root stringByAppendingPathComponent:source];
       BOOL safe=root.length&&!source.isAbsolutePath&&!destination.isAbsolutePath&&![source.pathComponents containsObject:@".."]&&![destination.pathComponents containsObject:@".."]&&destination.length&&[full.stringByResolvingSymlinksInPath hasPrefix:[root.stringByResolvingSymlinksInPath stringByAppendingString:@"/"]];
       NSDictionary *a=safe?[NSFileManager.defaultManager attributesOfItemAtPath:full error:nil]:nil;
-      if(!safe||![a[NSFileType] isEqual:NSFileTypeRegular]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:@"资源路径含链接、特殊文件或超出项目"}];return nil;}
+      if(!safe||![a[NSFileType] isEqual:NSFileTypeRegular]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"资源路径含链接、特殊文件或超出项目")}];return nil;}
       BOOL script=[destination hasPrefix:@"DEBIAN/"];if(script&&[destination isEqual:@"DEBIAN/control"])continue;
-      if(script&&![@[@"preinst",@"postinst",@"prerm",@"postrm",@"extrainst_",@"config",@"triggers",@"conffiles"] containsObject:[destination substringFromIndex:7]]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:@"DEBIAN 中含未支持的维护文件"}];return nil;}
+      if(script&&![@[@"preinst",@"postinst",@"prerm",@"postrm",@"extrainst_",@"config",@"triggers",@"conffiles"] containsObject:[destination substringFromIndex:7]]){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"DEBIAN 中含未支持的维护文件")}];return nil;}
       if([destination hasPrefix:@"var/jb/"])destination=[destination substringFromIndex:7];
       NSString *path=script?[@"./" stringByAppendingString:destination.lastPathComponent]:[([fields[@"architecture"] isEqual:@"iphoneos-arm64"]?@"./var/jb/":@"./") stringByAppendingString:destination];
       NSString *key=script?[@"control:" stringByAppendingString:path]:path;
@@ -170,7 +171,7 @@ NSData *TMCDebPackageWithResources(NSData *dylib, NSString *name, NSData *filter
           if ([destinations containsObject:script ? [@"control:" stringByAppendingString:parent] : parent]) { pathConflict = YES; break; }
       }
       unsigned long long size=[a[NSFileSize] unsignedLongLongValue];total+=size;
-      if(pathConflict||[destinations containsObject:key]||size>64*1024*1024||total>128*1024*1024||[path.lastPathComponent lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>100||[path.stringByDeletingLastPathComponent lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>154){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:@"资源重复、目录与文件冲突、路径过长或超过打包限制（单文件 64 MB / 总计 128 MB）"}];return nil;}
+      if(pathConflict||[destinations containsObject:key]||size>64*1024*1024||total>128*1024*1024||[path.lastPathComponent lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>100||[path.stringByDeletingLastPathComponent lengthOfBytesUsingEncoding:NSUTF8StringEncoding]>154){if(error)*error=[NSError errorWithDomain:@"Compiler" code:6 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"资源重复、目录与文件冲突、路径过长或超过打包限制（单文件 64 MB / 总计 128 MB）")}];return nil;}
       [destinations addObject:key];NSData *contents=[NSData dataWithContentsOfFile:full options:0 error:error];if(!contents)return nil;
       tarEntry(script?controlTar:dataTar,path,contents,script||([a[NSFilePosixPermissions] unsignedIntegerValue]&0111),script?controlDirectories:dataDirectories);
     }

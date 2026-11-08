@@ -1,4 +1,5 @@
 #import "DXRemoteAccess.h"
+#import "../DylixI18n.h"
 #import <Security/Security.h>
 #import <CommonCrypto/CommonDigest.h>
 #import <sys/stat.h>
@@ -35,7 +36,7 @@ static BOOL Equal(NSString *a,NSString *b){if(!a||!b)return NO;NSData *x=[a data
 #else
  NSDataWritingOptions options=NSDataWritingAtomic;
 #endif
- if(![data writeToFile:self.store options:options error:error])return NO;if(chmod(self.store.fileSystemRepresentation,0600)!=0){[NSFileManager.defaultManager removeItemAtPath:self.store error:nil];if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:1 userInfo:@{NSLocalizedDescriptionKey:@"保存设备授权的文件权限失败"}];return NO;}return YES;
+ if(![data writeToFile:self.store options:options error:error])return NO;if(chmod(self.store.fileSystemRepresentation,0600)!=0){[NSFileManager.defaultManager removeItemAtPath:self.store error:nil];if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:1 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"保存设备授权的文件权限失败")}];return NO;}return YES;
 }
 - (void)record:(NSString *)event{[self.audit addObject:@{@"event":event,@"timestamp":@(NSDate.date.timeIntervalSince1970)}];while(self.audit.count>200)[self.audit removeObjectAtIndex:0];}
 - (NSArray *)events{return self.audit.copy;}
@@ -47,22 +48,22 @@ static BOOL Equal(NSString *a,NSString *b){if(!a||!b)return NO;NSData *x=[a data
  [self prune];for(NSString *key in @[@"global",[@"peer:" stringByAppendingString:peer]]){NSMutableDictionary *r=self.attempts[key];if(!r){r=[@{@"time":@(NSDate.date.timeIntervalSince1970),@"count":@0} mutableCopy];self.attempts[key]=r;}NSUInteger n=[r[@"count"] unsignedIntegerValue];if(n>=([key isEqual:@"global"]?20:5))return NO;r[@"count"]=@(n+1);}return YES;
 }
 - (NSDictionary *)beginPair:(NSDictionary *)body peer:(NSString *)peer{
- if(![self rate:peer])return Fail(429,@"rate_limited",@"配对请求过多，请一分钟后再试");
- if(![body[@"code"] isKindOfClass:NSString.class]||!self.pairingCode.length||(!self.fixedCode&&self.codeExpiry<NSDate.date.timeIntervalSince1970)||!Equal(body[@"code"],self.pairingCode))return Fail(403,@"invalid_code",@"配对码无效或已过期");
- if(body[@"workspace"]&&![body[@"workspace"] isKindOfClass:NSNumber.class])return Fail(400,@"invalid_permission",@"权限参数需为布尔值");
- NSString *name=body[@"name"];if(![name isKindOfClass:NSString.class]||!name.length||name.length>64||[name rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound)return Fail(400,@"invalid_device",@"设备名称需为 1–64 个可见字符");
- if(self.requests.count>=8||self.records.count>=32)return Fail(429,@"device_limit",@"待确认或已授权设备已达上限");
+ if(![self rate:peer])return Fail(429,@"rate_limited",DXLoc(@"配对请求过多，请一分钟后再试"));
+ if(![body[@"code"] isKindOfClass:NSString.class]||!self.pairingCode.length||(!self.fixedCode&&self.codeExpiry<NSDate.date.timeIntervalSince1970)||!Equal(body[@"code"],self.pairingCode))return Fail(403,@"invalid_code",DXLoc(@"配对码无效或已过期"));
+ if(body[@"workspace"]&&![body[@"workspace"] isKindOfClass:NSNumber.class])return Fail(400,@"invalid_permission",DXLoc(@"权限参数需为布尔值"));
+ NSString *name=body[@"name"];if(![name isKindOfClass:NSString.class]||!name.length||name.length>64||[name rangeOfCharacterFromSet:NSCharacterSet.controlCharacterSet].location!=NSNotFound)return Fail(400,@"invalid_device",DXLoc(@"设备名称需为 1–64 个可见字符"));
+ if(self.requests.count>=8||self.records.count>=32)return Fail(429,@"device_limit",DXLoc(@"待确认或已授权设备已达上限"));
 
- NSString *token=DXRemoteRandom(),*device=NSUUID.UUID.UUIDString;if(!token||!device)return Fail(503,@"entropy_unavailable",@"随机数服务未就绪");
+ NSString *token=DXRemoteRandom(),*device=NSUUID.UUID.UUIDString;if(!token||!device)return Fail(503,@"entropy_unavailable",DXLoc(@"随机数服务未就绪"));
  NSMutableDictionary *entry=[@{ @"id":device,@"name":name,@"hash":DXRemoteHash(token),@"createdAt":@(NSDate.date.timeIntervalSince1970),@"expiresAt":@(NSDate.date.timeIntervalSince1970+30*86400),@"lastSeen":@0,@"permission":[body[@"workspace"] boolValue]?@"workspace":@"overview:read"} mutableCopy];
- [self.records addObject:entry];NSError *saveError=nil;if(![self save:&saveError]){[self.records removeObject:entry];return Fail(503,@"storage_failed",saveError.localizedDescription?:@"授权保存失败");}
+ [self.records addObject:entry];NSError *saveError=nil;if(![self save:&saveError]){[self.records removeObject:entry];return Fail(503,@"storage_failed",saveError.localizedDescription?:DXLoc(@"授权保存失败"));}
  if(!self.fixedCode){self.pairingCode=@"";self.codeExpiry=0;}
  [self record:@"pair_approved_direct"];
  return @{ @"status":@200,@"data":@{@"state":@"approved",@"deviceID":device},@"token":token};
 
 }
 - (BOOL)setFixedCode:(NSString *)code error:(NSError **)error{
- [self prune];if(![code isKindOfClass:NSString.class]||code.length<6||code.length>12||[code rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"0123456789"].invertedSet].location!=NSNotFound){if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:2 userInfo:@{NSLocalizedDescriptionKey:@"授权码需为 6–12 位数字"}];return NO;}self.fixedCode=YES;self.pairingCode=code;self.codeExpiry=0;[self record:@"pair_code_fixed"];return YES;}
+ [self prune];if(![code isKindOfClass:NSString.class]||code.length<6||code.length>12||[code rangeOfCharacterFromSet:[NSCharacterSet characterSetWithCharactersInString:@"0123456789"].invertedSet].location!=NSNotFound){if(error)*error=[NSError errorWithDomain:@"Dylix.Remote" code:2 userInfo:@{NSLocalizedDescriptionKey:DXLoc(@"授权码需为 6–12 位数字")}];return NO;}self.fixedCode=YES;self.pairingCode=code;self.codeExpiry=0;[self record:@"pair_code_fixed"];return YES;}
 - (BOOL)approve:(NSString *)identifier accepted:(BOOL)accepted error:(NSError **)error{
  [self prune];NSMutableDictionary *r=self.requests[identifier];if(![r[@"status"] isEqual:@"pending"])return NO;
  if(!accepted){r[@"status"]=@"denied";[self record:@"pair_denied"];return YES;}
@@ -71,9 +72,9 @@ static BOOL Equal(NSString *a,NSString *b){if(!a||!b)return NO;NSData *x=[a data
  if(![self save:error]){[self.records removeObject:entry];return NO;}r[@"token"]=token;r[@"status"]=@"approved";r[@"deviceID"]=device;[self record:@"pair_approved"];return YES;
 }
 - (NSDictionary *)claimPair:(NSString *)identifier secret:(NSString *)secret{
- [self prune];NSMutableDictionary *r=self.requests[identifier];if(!r||!Equal(DXRemoteHash(secret?:@""),r[@"secretHash"]))return Fail(403,@"invalid_pair",@"配对凭据无效或已过期");
+ [self prune];NSMutableDictionary *r=self.requests[identifier];if(!r||!Equal(DXRemoteHash(secret?:@""),r[@"secretHash"]))return Fail(403,@"invalid_pair",DXLoc(@"配对凭据无效或已过期"));
  if([r[@"status"] isEqual:@"pending"])return @{@"status":@202,@"data":@{@"state":@"pending"}};
- if([r[@"status"] isEqual:@"denied"]){[self.requests removeObjectForKey:identifier];return Fail(403,@"pair_denied",@"手机已拒绝此设备");}
+ if([r[@"status"] isEqual:@"denied"]){[self.requests removeObjectForKey:identifier];return Fail(403,@"pair_denied",DXLoc(@"手机已拒绝此设备"));}
  NSDictionary *result=@{@"status":@200,@"data":@{@"state":@"approved",@"deviceID":r[@"deviceID"]},@"token":r[@"token"]};[self.requests removeObjectForKey:identifier];return result;
 }
 - (NSDictionary *)authenticateCookie:(NSString *)cookie name:(NSString *)name{
@@ -90,7 +91,7 @@ static BOOL Equal(NSString *a,NSString *b){if(!a||!b)return NO;NSData *x=[a data
 }
 - (NSDictionary *)issueDAV:(NSString *)project readOnly:(BOOL)readOnly error:(NSError **)error{
  [self prune];if(self.records.count>=32)return nil;NSString *token=DXRemoteRandom();if(!token)return nil;
- NSMutableDictionary *entry=[@{@"id":NSUUID.UUID.UUIDString,@"name":@"WebDAV 客户端",@"hash":DXRemoteHash(token),@"createdAt":@(NSDate.date.timeIntervalSince1970),@"expiresAt":@(NSDate.date.timeIntervalSince1970+86400),@"lastSeen":@0,@"permission":@"webdav",@"projectID":project,@"readOnly":@(readOnly)} mutableCopy];[self.records addObject:entry];if(![self save:error]){[self.records removeObject:entry];return nil;}[self record:@"webdav_credential_issued"];return @{@"username":@"dylix",@"password":token,@"id":entry[@"id"]};
+ NSMutableDictionary *entry=[@{@"id":NSUUID.UUID.UUIDString,@"name":DXLoc(@"WebDAV 客户端"),@"hash":DXRemoteHash(token),@"createdAt":@(NSDate.date.timeIntervalSince1970),@"expiresAt":@(NSDate.date.timeIntervalSince1970+86400),@"lastSeen":@0,@"permission":@"webdav",@"projectID":project,@"readOnly":@(readOnly)} mutableCopy];[self.records addObject:entry];if(![self save:error]){[self.records removeObject:entry];return nil;}[self record:@"webdav_credential_issued"];return @{@"username":@"dylix",@"password":token,@"id":entry[@"id"]};
 }
 - (void)resetEphemeral{[self.requests removeAllObjects];[self.attempts removeAllObjects];self.pairingCode=@"";self.codeExpiry=0;self.fixedCode=NO;for(NSMutableDictionary *r in self.records)r[@"lastSeen"]=@0;}
 @end

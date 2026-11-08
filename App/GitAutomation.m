@@ -1,4 +1,5 @@
 #import "GitAutomation.h"
+#import "DylixI18n.h"
 #import "GitService.h"
 #import "GitPreferences.h"
 #import <UIKit/UIKit.h>
@@ -20,12 +21,12 @@
  NSUInteger generation=[self.generations[root] unsignedIntegerValue]+1;self.generations[root]=@(generation);self.pending[root]=trigger;
  dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(delay*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
  if([self.generations[root] unsignedIntegerValue]!=generation||!self.active)return;
- if([TMCGitLease isBuilding:root]){dispatch_async(TMCGitService.queue,^{[TMCGitPreferences record:@{@"status":@"paused",@"message":@"构建期间暂停自动存档，完成后继续"} root:root];});return;}
+ if([TMCGitLease isBuilding:root]){dispatch_async(TMCGitService.queue,^{[TMCGitPreferences record:@{@"status":@"paused",@"message":DXLoc(@"构建期间暂停自动存档，完成后继续")} root:root];});return;}
  dispatch_async(TMCGitService.queue,^{@autoreleasepool{
  __block BOOL eligible=NO;dispatch_sync(dispatch_get_main_queue(),^{eligible=self.active&&[self.generations[root] unsignedIntegerValue]==generation;});if(!eligible)return;
  NSDictionary *s=[TMCGitPreferences effective:root];if(![s[@"enabled"] boolValue]||([trigger isEqual:@"保存修改"]&&![s[@"afterSave"] boolValue])||([trigger isEqual:@"构建成功"]&&![s[@"afterBuild"] boolValue]))return;
- TMCGitService *g=[[TMCGitService alloc] initWithRoot:root];NSDateFormatter *f=[NSDateFormatter new];f.dateFormat=@"yyyy-MM-dd HH:mm:ss";NSString *message=s[@"template"]?:@"存档 {project} · {date}";for(NSString *key in @[@"project",@"trigger",@"date"]){NSString *value=[key isEqual:@"project"]?root.lastPathComponent:[key isEqual:@"trigger"]?trigger:[f stringFromDate:NSDate.date];message=[message stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"{%@}",key] withString:value];}
- NSError *error=nil;NSDictionary *result=[g archive:message protection:NO name:s[@"name"] email:s[@"email"] error:&error];NSMutableDictionary *event=[(result?:@{@"status":@"paused",@"message":error.localizedDescription?:@"自动存档未完成"}) mutableCopy];event[@"trigger"]=trigger;
+ TMCGitService *g=[[TMCGitService alloc] initWithRoot:root];NSDateFormatter *f=[NSDateFormatter new];f.dateFormat=@"yyyy-MM-dd HH:mm:ss";NSString *message=s[@"template"]?:DXLoc(@"存档 {project} · {date}");for(NSString *key in @[@"project",@"trigger",@"date"]){NSString *value=[key isEqual:@"project"]?root.lastPathComponent:[key isEqual:@"trigger"]?trigger:[f stringFromDate:NSDate.date];message=[message stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"{%@}",key] withString:value];}
+ NSError *error=nil;NSDictionary *result=[g archive:message protection:NO name:s[@"name"] email:s[@"email"] error:&error];NSMutableDictionary *event=[(result?:@{@"status":@"paused",@"message":error.localizedDescription?:DXLoc(@"自动存档未完成")}) mutableCopy];event[@"trigger"]=trigger;
  if([result[@"status"] isEqual:@"committed"]){__block BOOL active=NO;dispatch_sync(dispatch_get_main_queue(),^{active=self.active;});[event addEntriesFromDictionary:[g pushArchive:result[@"id"] foreground:active]];}
 
  [TMCGitPreferences record:event root:root];dispatch_async(dispatch_get_main_queue(),^{if([self.generations[root] unsignedIntegerValue]==generation&&![event[@"status"] isEqual:@"paused"])[self.pending removeObjectForKey:root];[NSNotificationCenter.defaultCenter postNotificationName:@"TMCGitArchiveChanged" object:root];});

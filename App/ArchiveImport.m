@@ -1,4 +1,5 @@
 #import "ArchiveImport.h"
+#import "DylixI18n.h"
 #import "TheosMakefile.h"
 #import "../Vendor/libarchive-headers/archive.h"
 #import "../Vendor/libarchive-headers/archive_entry.h"
@@ -19,7 +20,7 @@ static BOOL Fail(NSError **error, NSInteger code, NSString *message) {
 }
 static NSString *ArchiveFailure(struct archive *reader) {
     const char *raw=archive_error_string(reader);
-    return raw ? ([NSString stringWithUTF8String:raw] ?: @"压缩包读取失败") : @"压缩包已损坏或使用了尚未支持的压缩方式";
+    return raw ? ([NSString stringWithUTF8String:raw] ?: DXLoc(@"压缩包读取失败")) : DXLoc(@"压缩包已损坏或使用了尚未支持的压缩方式");
 }
 static NSString *EntryName(struct archive_entry *entry) {
     const char *raw=archive_entry_pathname_utf8(entry);
@@ -50,7 +51,7 @@ BOOL TMCExtractArchive(NSURL *input, NSURL *destination, NSString *password,
                        NSProgress *cancellation, TMCArchiveProgress progress, NSError **outError) {
     NSError *failure=nil;
     NSFileManager *fm=NSFileManager.defaultManager;
-    if([fm fileExistsAtPath:destination.path])return Fail(outError,TMCArchiveInvalid,@"解压目标目录已存在");
+    if([fm fileExistsAtPath:destination.path])return Fail(outError,TMCArchiveInvalid,DXLoc(@"解压目标目录已存在"));
     if(![fm createDirectoryAtURL:destination withIntermediateDirectories:YES attributes:nil error:outError])return NO;
     struct archive *reader=archive_read_new();
     // Only in-process filters: never let libarchive fall back to a child process.
@@ -75,46 +76,46 @@ BOOL TMCExtractArchive(NSURL *input, NSURL *destination, NSString *password,
     struct archive_entry *entry=NULL;int status=ARCHIVE_EOF;
     while(ok&&(status=archive_read_next_header(reader,&entry))!=ARCHIVE_EOF){
         @autoreleasepool {
-            if(cancellation.cancelled){ok=Fail(&failure,TMCArchiveCancelled,@"已取消解压");break;}
+            if(cancellation.cancelled){ok=Fail(&failure,TMCArchiveCancelled,DXLoc(@"已取消解压"));break;}
             if(status<ARCHIVE_WARN){
                 NSString *message=ArchiveFailure(reader);
                 ok=Fail(&failure,([message.lowercaseString containsString:@"passphrase"]||[message.lowercaseString containsString:@"password"])?TMCArchivePassword:TMCArchiveInvalid,message);break;
             }
-            if(++count>TMCMaxEntries){ok=Fail(&failure,TMCArchiveLimit,@"压缩包条目超过 100000 个");break;}
+            if(++count>TMCMaxEntries){ok=Fail(&failure,TMCArchiveLimit,DXLoc(@"压缩包条目超过 100000 个"));break;}
             NSString *name=EntryName(entry);NSString *relative=CleanRelativePath(name);
-            if(!relative){ok=Fail(&failure,TMCArchiveInvalid,@"压缩包包含越界路径或无效文件名");break;}
+            if(!relative){ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"压缩包包含越界路径或无效文件名"));break;}
             if(IgnoreMetadata(relative)){if(archive_read_data_skip(reader)<ARCHIVE_WARN){ok=Fail(&failure,TMCArchiveInvalid,ArchiveFailure(reader));break;}continue;}
             mode_t type=archive_entry_filetype(entry);
             if(archive_format(reader)==ARCHIVE_FORMAT_RAW){
-                if(archive_filter_code(reader,0)==ARCHIVE_FILTER_NONE){ok=Fail(&failure,TMCArchiveInvalid,@"所选文件不是支持的压缩包");break;}
+                if(archive_filter_code(reader,0)==ARCHIVE_FILTER_NONE){ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"所选文件不是支持的压缩包"));break;}
                 relative=CleanRelativePath(input.lastPathComponent.stringByDeletingPathExtension);
-                if(!relative.length){ok=Fail(&failure,TMCArchiveInvalid,@"压缩文件没有有效的文件名");break;}
+                if(!relative.length){ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"压缩文件没有有效的文件名"));break;}
             }
             if(archive_entry_symlink(entry)||archive_entry_hardlink(entry)||!(type==AE_IFREG||type==AE_IFDIR)){
-                ok=Fail(&failure,TMCArchiveInvalid,[NSString stringWithFormat:@"压缩包包含链接或特殊文件：%@。请使用普通源码文件重新压缩。",relative]);break;
+                ok=Fail(&failure,TMCArchiveInvalid,[NSString stringWithFormat:DXLoc(@"压缩包包含链接或特殊文件：%@。请使用普通源码文件重新压缩。"),relative]);break;
             }
-            if(!relative.length){if(type==AE_IFDIR)continue;ok=Fail(&failure,TMCArchiveInvalid,@"压缩包包含空文件路径");break;}
+            if(!relative.length){if(type==AE_IFDIR)continue;ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"压缩包包含空文件路径"));break;}
             NSString *target=[destination.path stringByAppendingPathComponent:relative];
             if(type==AE_IFDIR){
                 if(![fm createDirectoryAtPath:target withIntermediateDirectories:YES attributes:nil error:&failure]){ok=NO;break;}
                 continue;
             }
             NSString *collision=relative.precomposedStringWithCanonicalMapping.lowercaseString;
-            if([seen containsObject:collision]){ok=Fail(&failure,TMCArchiveInvalid,[NSString stringWithFormat:@"压缩包有重名文件：%@",relative]);break;}
+            if([seen containsObject:collision]){ok=Fail(&failure,TMCArchiveInvalid,[NSString stringWithFormat:DXLoc(@"压缩包有重名文件：%@"),relative]);break;}
             [seen addObject:collision];
             la_int64_t declared=archive_entry_size(entry);
             if(declared>(la_int64_t)TMCMaxFile||(declared>0&&(unsigned long long)declared>TMCMaxExpanded-total)){
-                ok=Fail(&failure,TMCArchiveLimit,@"解压限制：单文件 1 GB，工程总计 4 GB");break;
+                ok=Fail(&failure,TMCArchiveLimit,DXLoc(@"解压限制：单文件 1 GB，工程总计 4 GB"));break;
             }
             if(![fm createDirectoryAtPath:target.stringByDeletingLastPathComponent withIntermediateDirectories:YES attributes:nil error:&failure]){ok=NO;break;}
             int fd=open(target.fileSystemRepresentation,O_CREAT|O_EXCL|O_WRONLY|O_NOFOLLOW,0600);
-            if(fd<0){ok=Fail(&failure,TMCArchiveInvalid,[NSString stringWithFormat:@"创建解压文件失败：%@（%s）",relative,strerror(errno)]);break;}
+            if(fd<0){ok=Fail(&failure,TMCArchiveInvalid,[NSString stringWithFormat:DXLoc(@"创建解压文件失败：%@（%s）"),relative,strerror(errno)]);break;}
             unsigned long long fileBytes=0;char buffer[65536];la_ssize_t length;
             while((length=archive_read_data(reader,buffer,sizeof(buffer)))>0){
-                if(cancellation.cancelled){ok=Fail(&failure,TMCArchiveCancelled,@"已取消解压");break;}
-                if((unsigned long long)length>TMCMaxFile-fileBytes||(unsigned long long)length>TMCMaxExpanded-total){ok=Fail(&failure,TMCArchiveLimit,@"解压限制：单文件 1 GB，工程总计 4 GB");break;}
+                if(cancellation.cancelled){ok=Fail(&failure,TMCArchiveCancelled,DXLoc(@"已取消解压"));break;}
+                if((unsigned long long)length>TMCMaxFile-fileBytes||(unsigned long long)length>TMCMaxExpanded-total){ok=Fail(&failure,TMCArchiveLimit,DXLoc(@"解压限制：单文件 1 GB，工程总计 4 GB"));break;}
                 size_t written=0;
-                while(written<(size_t)length){ssize_t n=write(fd,buffer+written,(size_t)length-written);if(n<0&&errno==EINTR)continue;if(n<=0){ok=Fail(&failure,TMCArchiveInvalid,@"写入解压文件失败，请检查剩余存储空间");break;}written+=(size_t)n;}
+                while(written<(size_t)length){ssize_t n=write(fd,buffer+written,(size_t)length-written);if(n<0&&errno==EINTR)continue;if(n<=0){ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"写入解压文件失败，请检查剩余存储空间"));break;}written+=(size_t)n;}
                 if(!ok)break;
                 fileBytes+=(unsigned long long)length;total+=(unsigned long long)length;
                 if(progress)progress(count,total);
@@ -125,8 +126,8 @@ BOOL TMCExtractArchive(NSURL *input, NSURL *destination, NSString *password,
                 BOOL unsupported=[message.lowercaseString containsString:@"unsupported"]||[message.lowercaseString containsString:@"not supported"]||[message.lowercaseString containsString:@"unavailable"];
                 ok=Fail(&failure,(!unsupported&&(asksPassword||encrypted))?TMCArchivePassword:TMCArchiveInvalid,message);
             }
-            if(ok&&archive_entry_size_is_set(entry)&&declared>=0&&fileBytes!=(unsigned long long)declared)ok=Fail(&failure,TMCArchiveInvalid,@"解压文件长度与记录不一致，压缩包可能已损坏");
-            if(close(fd)!=0&&ok)ok=Fail(&failure,TMCArchiveInvalid,@"保存解压文件失败");
+            if(ok&&archive_entry_size_is_set(entry)&&declared>=0&&fileBytes!=(unsigned long long)declared)ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"解压文件长度与记录不一致，压缩包可能已损坏"));
+            if(close(fd)!=0&&ok)ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"保存解压文件失败"));
             if(ok){
                 // File data is inert; the app never executes extracted scripts.
                 [fm setAttributes:@{NSFilePosixPermissions:@(archive_entry_perm(entry)&0111?0700:0600),NSFileModificationDate:[NSDate dateWithTimeIntervalSince1970:archive_entry_mtime(entry)]} ofItemAtPath:target error:nil];
@@ -134,8 +135,8 @@ BOOL TMCExtractArchive(NSURL *input, NSURL *destination, NSString *password,
             }
         }
     }
-    if(archive_read_free(reader)<ARCHIVE_WARN&&ok)ok=Fail(&failure,TMCArchiveInvalid,@"压缩包校验失败");
-    if(cancellation.cancelled&&ok)ok=Fail(&failure,TMCArchiveCancelled,@"已取消解压");
+    if(archive_read_free(reader)<ARCHIVE_WARN&&ok)ok=Fail(&failure,TMCArchiveInvalid,DXLoc(@"压缩包校验失败"));
+    if(cancellation.cancelled&&ok)ok=Fail(&failure,TMCArchiveCancelled,DXLoc(@"已取消解压"));
     if(!ok)[fm removeItemAtURL:destination error:nil];
     if(outError)*outError=failure;
     return ok;
@@ -149,7 +150,7 @@ static NSArray *SourceFiles(NSString *root, NSError **error) {
     NSFileManager *fm=NSFileManager.defaultManager;NSMutableArray *sources=[NSMutableArray new];
     NSDirectoryEnumerator *enumerator=[fm enumeratorAtPath:root];NSUInteger count=0;
     for(NSString *relative in enumerator){
-        if(++count>TMCMaxEntries){if(error)*error=ImportError(TMCArchiveLimit,@"工程文件数量超出限制");return nil;}
+        if(++count>TMCMaxEntries){if(error)*error=ImportError(TMCArchiveLimit,DXLoc(@"工程文件数量超出限制"));return nil;}
         NSDictionary *attributes=[enumerator fileAttributes];
         if([attributes[NSFileType] isEqual:NSFileTypeDirectory]){if(SkipDirectory(relative.lastPathComponent)||relative.pathComponents.count>32)[enumerator skipDescendants];continue;}
         if(![attributes[NSFileType] isEqual:NSFileTypeRegular])continue;
@@ -161,7 +162,7 @@ static NSDictionary *ReadManifest(NSString *root,NSError **error) {
     NSData *data=[NSData dataWithContentsOfFile:[root stringByAppendingPathComponent:@"MobileCompiler.json"] options:0 error:error];
     if(!data)return nil;
     id result=[NSJSONSerialization JSONObjectWithData:data options:0 error:error];
-    if(![result isKindOfClass:NSDictionary.class]){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"MobileCompiler.json 应为 JSON 对象");return nil;}
+    if(![result isKindOfClass:NSDictionary.class]){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"MobileCompiler.json 应为 JSON 对象"));return nil;}
     return result;
 }
 
@@ -169,9 +170,9 @@ NSArray<NSDictionary *> *TMCArchiveProjects(NSString *root, NSProgress *cancella
     NSFileManager *fm=NSFileManager.defaultManager;NSMutableArray *candidates=[NSMutableArray new];
     NSMutableArray *queue=[NSMutableArray arrayWithObject:root];NSUInteger inspected=0;
     while(queue.count){
-        if(cancellation.cancelled){if(error)*error=ImportError(TMCArchiveCancelled,@"已取消工程识别");return nil;}
+        if(cancellation.cancelled){if(error)*error=ImportError(TMCArchiveCancelled,DXLoc(@"已取消工程识别"));return nil;}
         NSString *path=queue.firstObject;[queue removeObjectAtIndex:0];
-        if(++inspected>TMCMaxEntries){if(error)*error=ImportError(TMCArchiveLimit,@"工程目录数量超出限制");return nil;}
+        if(++inspected>TMCMaxEntries){if(error)*error=ImportError(TMCArchiveLimit,DXLoc(@"工程目录数量超出限制"));return nil;}
         NSArray *names=[fm contentsOfDirectoryAtPath:path error:error];if(!names)return nil;
         BOOL manifest=[names containsObject:@"MobileCompiler.json"];
         BOOL marker=manifest||[names containsObject:@"control"]||[names containsObject:@"Makefile"]||[names containsObject:@"makefile"];
@@ -192,7 +193,7 @@ NSArray<NSDictionary *> *TMCArchiveProjects(NSString *root, NSProgress *cancella
     }
     if(candidates.count)return candidates;
     NSArray *sources=SourceFiles(root,error);if(!sources)return nil;
-    if(!sources.count){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"压缩包中没有识别到 Objective-C、C/C++ 或 Logos 源码工程");return nil;}
+    if(!sources.count){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"压缩包中没有识别到 Objective-C、C/C++ 或 Logos 源码工程"));return nil;}
     // Remove only a common wrapper directory; keep headers/resources beside sources.
     NSString *project=root;
     while(YES){
@@ -215,8 +216,8 @@ NSDictionary *TMCPrepareImportedProject(NSString *root, NSString *fallbackName, 
         for(id item in value)if(![item isKindOfClass:NSString.class]){if(error)*error=ImportError(TMCArchiveProjectInvalid,[key stringByAppendingString:@" 应只包含字符串"]);return nil;}
     }
     for(NSString *key in @[@"name",@"productName",@"prefixHeader",@"optimization",@"logosGenerator",@"sdkVersion",@"deploymentTarget",@"cxxStandard",@"cStandard",@"outputPattern-deb",@"outputPattern-dylib"])if(config[key]&&![config[key] isKindOfClass:NSString.class]){if(error)*error=ImportError(TMCArchiveProjectInvalid,[key stringByAppendingString:@" 应为字符串"]);return nil;}
-    if(config[@"packageSchemes"]&&![config[@"packageSchemes"] count]){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"packageSchemes 至少选择一项");return nil;}
-    for(NSString *scheme in config[@"packageSchemes"])if(![@[@"rootless",@"rootful",@"roothide"] containsObject:scheme]){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"packageSchemes 包类型无效");return nil;}
+    if(config[@"packageSchemes"]&&![config[@"packageSchemes"] count]){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"packageSchemes 至少选择一项"));return nil;}
+    for(NSString *scheme in config[@"packageSchemes"])if(![@[@"rootless",@"rootful",@"roothide"] containsObject:scheme]){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"packageSchemes 包类型无效"));return nil;}
     for(NSString *key in @[@"packageScheme",@"cpuArchitecture"]){NSArray *allowed=[key isEqual:@"packageScheme"]?@[@"rootless",@"rootful",@"roothide"]:@[@"arm64",@"arm64e"];if(config[key]&&![allowed containsObject:config[key]]){if(error)*error=ImportError(TMCArchiveProjectInvalid,[key stringByAppendingString:@" 值不受支持"]);return nil;}}
     for(NSString *key in @[@"package",@"exportDylib",@"collectErrors",@"objcArc"])if(config[key]&&![config[key] isKindOfClass:NSNumber.class]){if(error)*error=ImportError(TMCArchiveProjectInvalid,[key stringByAppendingString:@" 应为布尔值"]);return nil;}
     NSArray *sources=existing&&config[@"sources"]?config[@"sources"]:nil;
@@ -226,16 +227,16 @@ NSDictionary *TMCPrepareImportedProject(NSString *root, NSString *fallbackName, 
     NSArray *targets=make[@"TWEAK_NAME"]?:make[@"LIBRARY_NAME"];
     NSString *target=targets.count==1?targets.firstObject:nil;
     NSString *sourceKey=target?[target stringByAppendingString:@"_FILES"]:nil;
-    if((sourceKey&&unresolved[sourceKey])||unresolved[@"TWEAK_NAME"]||unresolved[@"LIBRARY_NAME"]){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"Makefile 源列表含尚未支持的表达式，请在 MobileCompiler.json 中明确配置 sources；未执行 shell 或自定义命令。");return nil;}
-    if(([make[@"TWEAK_NAME"] count]&&[make[@"LIBRARY_NAME"] count])||targets.count>1){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"Makefile 包含多个构建目标，请分别导入并配置 MobileCompiler.json。");return nil;}
+    if((sourceKey&&unresolved[sourceKey])||unresolved[@"TWEAK_NAME"]||unresolved[@"LIBRARY_NAME"]){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"Makefile 源列表含尚未支持的表达式，请在 MobileCompiler.json 中明确配置 sources；未执行 shell 或自定义命令。"));return nil;}
+    if(([make[@"TWEAK_NAME"] count]&&[make[@"LIBRARY_NAME"] count])||targets.count>1){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"Makefile 包含多个构建目标，请分别导入并配置 MobileCompiler.json。"));return nil;}
     NSArray *makeSources=sourceKey?make[sourceKey]:nil;
     if(makeSources)sources=[NSOrderedSet orderedSetWithArray:makeSources].array;
     else if(!sources)sources=SourceFiles(root,error);
-    if(![sources isKindOfClass:NSArray.class]||!sources.count){if(error)*error=ImportError(TMCArchiveProjectInvalid,@"工程没有配置可编译的源码文件");return nil;}
+    if(![sources isKindOfClass:NSArray.class]||!sources.count){if(error)*error=ImportError(TMCArchiveProjectInvalid,DXLoc(@"工程没有配置可编译的源码文件"));return nil;}
     for(id source in sources){
         NSString *relative=[source isKindOfClass:NSString.class]?CleanRelativePath(source):nil;
         NSDictionary *attributes=relative?[fm attributesOfItemAtPath:[root stringByAppendingPathComponent:relative] error:nil]:nil;
-        if(!relative.length||![attributes[NSFileType] isEqual:NSFileTypeRegular]||![@[@"x",@"xm",@"m",@"mm",@"c",@"cpp"] containsObject:relative.pathExtension.lowercaseString]){if(error)*error=ImportError(TMCArchiveProjectInvalid,[NSString stringWithFormat:@"工程源码路径无效：%@",source]);return nil;}
+        if(!relative.length||![attributes[NSFileType] isEqual:NSFileTypeRegular]||![@[@"x",@"xm",@"m",@"mm",@"c",@"cpp"] containsObject:relative.pathExtension.lowercaseString]){if(error)*error=ImportError(TMCArchiveProjectInvalid,[NSString stringWithFormat:DXLoc(@"工程源码路径无效：%@"),source]);return nil;}
     }
     BOOL needsSourceList=existing&&!config[@"sources"];
     if(needsSourceList)config[@"sources"]=sources;
@@ -287,7 +288,7 @@ NSDictionary *TMCPrepareImportedProject(NSString *root, NSString *fallbackName, 
         }
         if([makeResult[@"present"] boolValue]){
             NSMutableArray *notes=[makeResult[@"notes"] mutableCopy];
-            [notes addObject:@"已在本机解析常用 Make 变量、wildcard 和静态配置；SCHEME 按 rootless 选择。未执行 make、shell、配方或安装命令；未识别的编译/链接参数请核对。"];
+            [notes addObject:DXLoc(@"已在本机解析常用 Make 变量、wildcard 和静态配置；SCHEME 按 rootless 选择。未执行 make、shell、配方或安装命令；未识别的编译/链接参数请核对。")];
             for(NSString *key in [unresolved.allKeys sortedArrayUsingSelector:@selector(compare:)])if(target&&[key hasPrefix:[target stringByAppendingString:@"_"]])[notes addObject:[@"待手动补充的 Make 变量：" stringByAppendingString:key]];
             config[@"importNotes"]=notes;
         }

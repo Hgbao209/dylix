@@ -1,4 +1,5 @@
 #import "TFAIPersona.h"
+#import "../../DylixI18n.h"
 NSString *const TFAIPersonaDidChangeNotification=@"TFAIPersonaDidChange";
 NSString *const TFAIPersonaBeginMarker=@"<!-- dylix-persona:begin -->";
 NSString *const TFAIPersonaEndMarker=@"<!-- dylix-persona:end -->";
@@ -7,7 +8,7 @@ static BOOL ModeValid(id mode){return [mode isKindOfClass:NSString.class]&&[@[@"
 static BOOL StringArrayValid(id value){if(value==nil)return YES;if(![value isKindOfClass:NSArray.class])return NO;for(id item in value)if(![item isKindOfClass:NSString.class])return NO;return YES;}
 // New metadata is additive. Keep the version-2 envelope readable by build166.
 static NSNumber *PersonaStorageVersion(void){return @2;}
-NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?@"前置":[mode isEqual:@"replace"]?@"替换":@"后置";}
+NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?@"前置":[mode isEqual:@"replace"]?@"替换":DXLoc(@"后置");}
 @implementation TFAIPersona
 - (instancetype)initWithJSON:(NSDictionary *)j {
  if(![j isKindOfClass:NSDictionary.class]||![j[@"id"] isKindOfClass:NSString.class]||![[NSUUID alloc]initWithUUIDString:j[@"id"]]||![j[@"name"] isKindOfClass:NSString.class]||![j[@"body"] isKindOfClass:NSString.class]||!ModeValid(j[@"mode"])||![j[@"updatedAt"] isKindOfClass:NSNumber.class]||![j[@"isBuiltin"] isKindOfClass:NSNumber.class])return nil;
@@ -32,12 +33,12 @@ NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?
   _url=url;_lock=[NSRecursiveLock new];_catalog=@{};
   if(builtinsURL){NSData *data=[NSData dataWithContentsOfURL:builtinsURL];id j=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:nil]:nil;BOOL valid=[j isKindOfClass:NSDictionary.class]&&[j[@"catalogVersion"] isKindOfClass:NSNumber.class]&&[j[@"catalogVersion"] integerValue]>=1&&[j[@"personas"] isKindOfClass:NSArray.class]&&[j[@"tailBody"] isKindOfClass:NSString.class]&&[j[@"prefixTemplate"] isKindOfClass:NSString.class]&&StringArrayValid(j[@"retiredBuiltinKeys"]);NSMutableSet *ids=[NSMutableSet new];
    if(valid)for(id row in j[@"personas"]){TFAIPersona *p=[[TFAIPersona alloc]initWithJSON:row];if(!p||!p.isBuiltin||[ids containsObject:p.identifier]){valid=NO;break;}[ids addObject:p.identifier];}
-   if(valid)_catalog=j;else _loadError=PersonaError(@"内置人设资源异常，请重新安装完整版本。");
+   if(valid)_catalog=j;else _loadError=PersonaError(DXLoc(@"内置人设资源异常，请重新安装完整版本。"));
   }
   _state=@{@"schemaVersion":PersonaStorageVersion(),@"catalogVersion":@0,@"enabled":@NO,@"personas":@[],@"activeID":NSNull.null,@"hiddenBuiltins":@[],@"tailEnabled":@NO,@"matchingMode":@"auto",@"includeDeveloperPrompt":@YES};
   BOOL exists=[NSFileManager.defaultManager fileExistsAtPath:url.path];BOOL migration=NO;
   if(exists){NSError *e=nil;NSData *data=[NSData dataWithContentsOfURL:url options:0 error:&e];id j=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:&e]:nil;
-   if(![j isKindOfClass:NSDictionary.class]||![@[@1,@2,@3] containsObject:j[@"schemaVersion"]]||![j[@"enabled"] isKindOfClass:NSNumber.class]||![j[@"personas"] isKindOfClass:NSArray.class])_loadError=e?:PersonaError(@"人设存储格式异常，原文件已保留。");
+   if(![j isKindOfClass:NSDictionary.class]||![@[@1,@2,@3] containsObject:j[@"schemaVersion"]]||![j[@"enabled"] isKindOfClass:NSNumber.class]||![j[@"personas"] isKindOfClass:NSArray.class])_loadError=e?:PersonaError(DXLoc(@"人设存储格式异常，原文件已保留。"));
    else {NSMutableSet *ids=[NSMutableSet new];NSMutableArray *rows=[NSMutableArray new];BOOL valid=YES;for(id row in j[@"personas"]){TFAIPersona *p=[[TFAIPersona alloc]initWithJSON:row];if(!p||[ids containsObject:p.identifier]){valid=NO;break;}[ids addObject:p.identifier];[rows addObject:p.JSON];}
     id active=j[@"activeID"];if(active!=NSNull.null&&(![active isKindOfClass:NSString.class]||![ids containsObject:active]))valid=NO;
     id hidden=j[@"hiddenBuiltins"]?:@[];if(![hidden isKindOfClass:NSArray.class])valid=NO;else for(id v in hidden)if(![v isKindOfClass:NSString.class])valid=NO;
@@ -45,7 +46,7 @@ NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?
     if(j[@"includeDeveloperPrompt"]&&![j[@"includeDeveloperPrompt"] isKindOfClass:NSNumber.class])valid=NO;
     NSString *matching=[j[@"matchingMode"] isKindOfClass:NSString.class]?j[@"matchingMode"]:nil;if(matching&&![@[@"auto",@"manual"] containsObject:matching])valid=NO;if(!matching)matching=[active isKindOfClass:NSString.class]?@"manual":@"auto";
     NSNumber *storedCatalog=[j[@"catalogVersion"] isKindOfClass:NSNumber.class]?j[@"catalogVersion"]:@0;
-    if(valid){_state=@{@"schemaVersion":PersonaStorageVersion(),@"catalogVersion":storedCatalog,@"enabled":j[@"enabled"],@"personas":rows.copy,@"activeID":active,@"hiddenBuiltins":hidden,@"tailEnabled":j[@"tailEnabled"]?:@NO,@"matchingMode":matching,@"includeDeveloperPrompt":j[@"includeDeveloperPrompt"]?:@YES};migration=![j[@"schemaVersion"] isEqual:PersonaStorageVersion()]||j[@"matchingMode"]==nil;}else _loadError=PersonaError(@"人设记录异常，原文件已保留。");
+    if(valid){_state=@{@"schemaVersion":PersonaStorageVersion(),@"catalogVersion":storedCatalog,@"enabled":j[@"enabled"],@"personas":rows.copy,@"activeID":active,@"hiddenBuiltins":hidden,@"tailEnabled":j[@"tailEnabled"]?:@NO,@"matchingMode":matching,@"includeDeveloperPrompt":j[@"includeDeveloperPrompt"]?:@YES};migration=![j[@"schemaVersion"] isEqual:PersonaStorageVersion()]||j[@"matchingMode"]==nil;}else _loadError=PersonaError(DXLoc(@"人设记录异常，原文件已保留。"));
    }
   }
   if(!_loadError){NSMutableArray *rows=[_state[@"personas"] mutableCopy];NSNumber *catalogVersion=_catalog[@"catalogVersion"]?:@0;BOOL catalogUpgrade=[catalogVersion integerValue]>[_state[@"catalogVersion"] integerValue];
@@ -57,7 +58,7 @@ NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?
   }
  }return self;
 }
-- (NSDictionary *)snapshot{[self.lock lock];NSMutableDictionary *copy=[self.state mutableCopy];copy[@"tailBody"]=self.catalog[@"tailBody"]?:@"";copy[@"prefixTemplate"]=self.catalog[@"prefixTemplate"]?:@"## 回复前缀约定\n每条回复以以下字符串开头：\n";[self.lock unlock];return copy.copy;}
+- (NSDictionary *)snapshot{[self.lock lock];NSMutableDictionary *copy=[self.state mutableCopy];copy[@"tailBody"]=self.catalog[@"tailBody"]?:@"";copy[@"prefixTemplate"]=self.catalog[@"prefixTemplate"]?:DXLoc(@"## 回复前缀约定\n每条回复以以下字符串开头：\n");[self.lock unlock];return copy.copy;}
 - (BOOL)enabled{return [[self snapshot][@"enabled"] boolValue];}
 - (NSString *)activeID{id value=[self snapshot][@"activeID"];return [value isKindOfClass:NSString.class]?value:nil;}
 - (NSArray *)personas{NSMutableArray *items=[NSMutableArray new];for(NSDictionary *row in [self snapshot][@"personas"]){TFAIPersona *p=[[TFAIPersona alloc]initWithJSON:row];if(p)[items addObject:p];}return items.copy;}
@@ -73,36 +74,36 @@ NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?
 - (BOOL)commit:(NSDictionary *)next error:(NSError **)error {
  if(self.loadError){if(error)*error=self.loadError;return NO;}NSMutableDictionary *write=[next mutableCopy];write[@"schemaVersion"]=PersonaStorageVersion();NSError *e=nil;NSURL *folder=[self.url URLByDeletingLastPathComponent];BOOL ok=[NSFileManager.defaultManager createDirectoryAtURL:folder withIntermediateDirectories:YES attributes:nil error:&e];
  if(ok){[folder setResourceValue:@YES forKey:NSURLIsExcludedFromBackupKey error:nil];NSData *data=[NSJSONSerialization dataWithJSONObject:write options:NSJSONWritingSortedKeys|NSJSONWritingPrettyPrinted error:&e];ok=data&&[data writeToURL:self.url options:NSDataWritingAtomic error:&e];}
- if(!ok){if(error)*error=e?:PersonaError(@"保存人设失败。");return NO;}self.state=write.copy;dispatch_async(dispatch_get_main_queue(),^{[NSNotificationCenter.defaultCenter postNotificationName:TFAIPersonaDidChangeNotification object:self];});return YES;
+ if(!ok){if(error)*error=e?:PersonaError(DXLoc(@"保存人设失败。"));return NO;}self.state=write.copy;dispatch_async(dispatch_get_main_queue(),^{[NSNotificationCenter.defaultCenter postNotificationName:TFAIPersonaDidChangeNotification object:self];});return YES;
 }
 - (BOOL)setEnabled:(BOOL)enabled error:(NSError **)error{[self.lock lock];NSMutableDictionary *s=[self.state mutableCopy];s[@"enabled"]=@(enabled);BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
-- (BOOL)setMatchingMode:(NSString *)mode error:(NSError **)error{if(![@[@"auto",@"manual"] containsObject:mode]){if(error)*error=PersonaError(@"匹配方式无效。");return NO;}[self.lock lock];NSMutableDictionary *s=[self.state mutableCopy];s[@"matchingMode"]=mode;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
+- (BOOL)setMatchingMode:(NSString *)mode error:(NSError **)error{if(![@[@"auto",@"manual"] containsObject:mode]){if(error)*error=PersonaError(DXLoc(@"匹配方式无效。"));return NO;}[self.lock lock];NSMutableDictionary *s=[self.state mutableCopy];s[@"matchingMode"]=mode;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
 - (BOOL)setIncludeDeveloperPrompt:(BOOL)include error:(NSError **)error{[self.lock lock];NSMutableDictionary *s=[self.state mutableCopy];s[@"includeDeveloperPrompt"]=@(include);BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
 - (BOOL)setTailEnabled:(BOOL)enabled error:(NSError **)error{[self.lock lock];NSMutableDictionary *s=[self.state mutableCopy];s[@"tailEnabled"]=@(enabled);BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
-- (BOOL)activateOnly:(NSString *)identifier error:(NSError **)error{[self.lock lock];BOOL found=!identifier;for(NSDictionary *p in self.state[@"personas"])if([p[@"id"] isEqual:identifier])found=YES;if(!found){if(error)*error=PersonaError(@"所选人设已不存在。");[self.lock unlock];return NO;}NSMutableDictionary *s=[self.state mutableCopy];s[@"activeID"]=identifier?:NSNull.null;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
+- (BOOL)activateOnly:(NSString *)identifier error:(NSError **)error{[self.lock lock];BOOL found=!identifier;for(NSDictionary *p in self.state[@"personas"])if([p[@"id"] isEqual:identifier])found=YES;if(!found){if(error)*error=PersonaError(DXLoc(@"所选人设已不存在。"));[self.lock unlock];return NO;}NSMutableDictionary *s=[self.state mutableCopy];s[@"activeID"]=identifier?:NSNull.null;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
 - (BOOL)saveName:(NSString *)name body:(NSString *)body mode:(NSString *)mode identifier:(NSString *)identifier error:(NSError **)error {
  [self.lock lock];NSDictionary *old=nil;for(NSDictionary *p in self.state[@"personas"])if([p[@"id"] isEqual:identifier]){old=p;break;}
  BOOL ok=[self saveName:name body:body mode:mode summary:old[@"summary"]?:@"" replyPrefix:old[@"replyPrefix"]?:@"" selfCheckCommand:old[@"selfCheckCommand"]?:@"" selfCheckReply:old[@"selfCheckReply"]?:@"" identifier:identifier error:error];[self.lock unlock];return ok;
 }
 - (BOOL)saveName:(NSString *)name body:(NSString *)body mode:(NSString *)mode summary:(NSString *)summary replyPrefix:(NSString *)prefix selfCheckCommand:(NSString *)command selfCheckReply:(NSString *)reply identifier:(NSString *)identifier error:(NSError **)error {
  name=[name stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
- if(!name.length||![body isKindOfClass:NSString.class]||!ModeValid(mode)){if(error)*error=PersonaError(@"请填写名称并选择注入方式。");return NO;}
- for(NSString *v in @[body,summary?:@"",prefix?:@"",command?:@"",reply?:@""])for(NSString *marker in @[TFAIPersonaBeginMarker,TFAIPersonaEndMarker,@"<!-- dylix-persona-tail:begin -->",@"<!-- dylix-persona-tail:end -->"])if([v containsString:marker]){if(error)*error=PersonaError(@"内容包含人设保留标记，请移除 begin / end 标记后保存。");return NO;}
+ if(!name.length||![body isKindOfClass:NSString.class]||!ModeValid(mode)){if(error)*error=PersonaError(DXLoc(@"请填写名称并选择注入方式。"));return NO;}
+ for(NSString *v in @[body,summary?:@"",prefix?:@"",command?:@"",reply?:@""])for(NSString *marker in @[TFAIPersonaBeginMarker,TFAIPersonaEndMarker,@"<!-- dylix-persona-tail:begin -->",@"<!-- dylix-persona-tail:end -->"])if([v containsString:marker]){if(error)*error=PersonaError(DXLoc(@"内容包含人设保留标记，请移除 begin / end 标记后保存。"));return NO;}
  [self.lock lock];NSMutableArray *rows=[self.state[@"personas"] mutableCopy];NSUInteger index=NSNotFound;for(NSUInteger i=0;i<rows.count;i++)if([rows[i][@"id"] isEqual:identifier]){index=i;break;}
- if(identifier&&index==NSNotFound){if(error)*error=PersonaError(@"人设已被删除，请重新打开列表。");[self.lock unlock];return NO;}
+ if(identifier&&index==NSNotFound){if(error)*error=PersonaError(DXLoc(@"人设已被删除，请重新打开列表。"));[self.lock unlock];return NO;}
  NSDictionary *old=index==NSNotFound?@{}:rows[index];NSDictionary *row=@{@"id":identifier?:NSUUID.UUID.UUIDString,@"name":name,@"body":body,@"mode":mode,@"isBuiltin":old[@"isBuiltin"]?:@NO,@"builtinKey":old[@"builtinKey"]?:@"",@"updatedAt":@(NSDate.date.timeIntervalSince1970),@"summary":summary?:@"",@"replyPrefix":prefix?:@"",@"selfCheckCommand":command?:@"",@"selfCheckReply":reply?:@"",@"generation":old[@"generation"]?:@"",@"modelPatterns":old[@"modelPatterns"]?:@[],@"providerIDs":old[@"providerIDs"]?:@[],@"matchPriority":old[@"matchPriority"]?:@0};
  if(index==NSNotFound)[rows addObject:row];else rows[index]=row;NSMutableDictionary *s=[self.state mutableCopy];s[@"personas"]=rows.copy;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;
 }
 - (BOOL)remove:(NSString *)identifier error:(NSError **)error{[self.lock lock];NSMutableArray *rows=[NSMutableArray new],*hidden=[self.state[@"hiddenBuiltins"] mutableCopy];for(NSDictionary *row in self.state[@"personas"]){if(![row[@"id"] isEqual:identifier])[rows addObject:row];else if([row[@"isBuiltin"] boolValue]&&![hidden containsObject:identifier])[hidden addObject:identifier];}NSMutableDictionary *s=[self.state mutableCopy];s[@"personas"]=rows.copy;s[@"hiddenBuiltins"]=hidden.copy;if([s[@"activeID"] isEqual:identifier])s[@"activeID"]=NSNull.null;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;}
 - (BOOL)resetBuiltin:(NSString *)identifier error:(NSError **)error {
  [self.lock lock];NSDictionary *original=nil;for(NSDictionary *p in self.catalog[@"personas"])if([p[@"id"] isEqual:identifier])original=p;
- if(!original){if(error)*error=PersonaError(@"没有对应的内置原文。");[self.lock unlock];return NO;}
+ if(!original){if(error)*error=PersonaError(DXLoc(@"没有对应的内置原文。"));[self.lock unlock];return NO;}
  NSMutableArray *rows=[self.state[@"personas"] mutableCopy],*hidden=[self.state[@"hiddenBuiltins"] mutableCopy];BOOL found=NO;for(NSUInteger i=0;i<rows.count;i++)if([rows[i][@"id"] isEqual:identifier]){rows[i]=original;found=YES;break;}if(!found)[rows addObject:original];[hidden removeObject:identifier];NSMutableDictionary *s=[self.state mutableCopy];s[@"personas"]=rows.copy;s[@"hiddenBuiltins"]=hidden.copy;BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;
 }
 - (BOOL)restoreBuiltins:(NSError **)error {
  [self.lock lock];NSMutableArray *rows=[self.state[@"personas"] mutableCopy];NSMutableSet *ids=[NSMutableSet new];for(NSDictionary *p in rows)[ids addObject:p[@"id"]];for(NSDictionary *p in self.catalog[@"personas"])if(![ids containsObject:p[@"id"]])[rows addObject:p];NSMutableDictionary *s=[self.state mutableCopy];s[@"personas"]=rows.copy;s[@"hiddenBuiltins"]=@[];BOOL ok=[self commit:s error:error];[self.lock unlock];return ok;
 }
-- (NSString *)statusBadge{NSDictionary *s=[self snapshot];if(![s[@"enabled"] boolValue])return @"已关闭";if([s[@"matchingMode"] isEqual:@"auto"])return @"自动匹配模型";NSDictionary *p=[TFAIPersonaEngine active:s];return p?[NSString stringWithFormat:@"（已启用·%@）",p[@"name"]]:@"未选择生效项";}
+- (NSString *)statusBadge{NSDictionary *s=[self snapshot];if(![s[@"enabled"] boolValue])return DXLoc(@"已关闭");if([s[@"matchingMode"] isEqual:@"auto"])return DXLoc(@"自动匹配模型");NSDictionary *p=[TFAIPersonaEngine active:s];return p?[NSString stringWithFormat:DXLoc(@"（已启用·%@）"),p[@"name"]]:DXLoc(@"未选择生效项");}
 @end
 @implementation TFAIPersonaEngine
 + (NSString *)strip:(NSString *)text begin:(NSString *)beginMarker end:(NSString *)endMarker{
@@ -121,7 +122,7 @@ NSString *TFAIPersonaModeLabel(NSString *mode){return [mode isEqual:@"prepend"]?
  NSString *base=[self strip:developerPrompt];NSDictionary *p=[self effective:snapshot connection:connection];
  if(snapshot[@"includeDeveloperPrompt"]&&![snapshot[@"includeDeveloperPrompt"] boolValue])return p?p[@"body"]:@"";
  if(!p)return base;
- NSMutableString *body=[p[@"body"] mutableCopy];if([p[@"replyPrefix"] length])[body appendFormat:@"\n\n%@%@",snapshot[@"prefixTemplate"]?:@"## 回复前缀约定\n每条回复以以下字符串开头：\n",p[@"replyPrefix"]];
+ NSMutableString *body=[p[@"body"] mutableCopy];if([p[@"replyPrefix"] length])[body appendFormat:@"\n\n%@%@",snapshot[@"prefixTemplate"]?:DXLoc(@"## 回复前缀约定\n每条回复以以下字符串开头：\n"),p[@"replyPrefix"]];
  NSString *block=[self wrap:body],*system;if([p[@"mode"] isEqual:@"replace"]||!base.length)system=block;else system=[p[@"mode"] isEqual:@"prepend"]?[NSString stringWithFormat:@"%@\n\n%@",block,base]:[NSString stringWithFormat:@"%@\n\n%@",base,block];
  if([snapshot[@"tailEnabled"] boolValue]&&[snapshot[@"tailBody"] length])system=[system stringByAppendingFormat:@"\n\n<!-- dylix-persona-tail:begin -->\n%@\n<!-- dylix-persona-tail:end -->",snapshot[@"tailBody"]];return system;
 }

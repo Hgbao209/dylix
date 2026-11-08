@@ -1,7 +1,8 @@
 #import "../AIContracts.h"
+#import "../../DylixI18n.h"
 #import "../../GlassSupport.h"
 static inline void AIAlert(UIViewController *host,NSString *title,NSString *message) {
- UIAlertController *a=[UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];[a addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];[host presentViewController:a animated:YES completion:nil];
+ UIAlertController *a=[UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];[a addAction:[UIAlertAction actionWithTitle:DXLoc(@"好") style:UIAlertActionStyleDefault handler:nil]];[host presentViewController:a animated:YES completion:nil];
 }
 static inline UIBarButtonItem *AIBar(NSString *icon,NSString *label,id target,SEL selector) {
  UIBarButtonItem *b=[[UIBarButtonItem alloc]initWithImage:[UIImage systemImageNamed:icon] style:UIBarButtonItemStylePlain target:target action:selector];b.accessibilityLabel=label;return b;

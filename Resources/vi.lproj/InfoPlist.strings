@@ -2,3 +2,4 @@
 "CFBundleDisplayName" = "Dylix";
 "CFBundleName" = "Dylix";
 "NSCameraUsageDescription" = "Chụp ảnh làm tệp đính kèm gửi tới mô hình AI.";
+"NSLocalNetworkUsageDescription" = "Cho phép các thiết bị đã ghép nối trong cùng Wi-Fi truy cập khi bạn bật bảng điều khiển LAN từ xa hoặc cấu hình dịch vụ AI trong mạng LAN.";
