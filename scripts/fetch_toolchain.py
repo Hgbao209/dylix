@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Install the pinned, SDK-free Dylix toolchain. No external scripts are run."""
-import argparse, hashlib, json, pathlib, shutil, tarfile, tempfile, urllib.request
+import argparse, hashlib, json, pathlib, shutil, tarfile, tempfile, time, urllib.error, urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--archive', type=pathlib.Path, help='Use a previously downloaded release asset')
@@ -12,8 +12,22 @@ with tempfile.TemporaryDirectory(prefix='dylix-toolchain-') as tmp:
     archive = args.archive or tmp / 'toolchain.tar.gz'
     if args.archive is None:
         print('Downloading:', asset['url'])
-        with urllib.request.urlopen(asset['url'], timeout=120) as response, archive.open('wb') as out:
-            shutil.copyfileobj(response, out)
+        last = None
+        for attempt in range(1, 7):
+            part = archive.with_name(archive.name + '.part')
+            try:
+                with urllib.request.urlopen(asset['url'], timeout=300) as response, part.open('wb') as out:
+                    shutil.copyfileobj(response, out)
+                part.replace(archive)
+                break
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as error:
+                last = error
+                part.unlink(missing_ok=True)
+                if attempt == 6:
+                    raise SystemExit('Toolchain download failed after 6 attempts: ' + repr(error))
+                delay = 10 * attempt
+                print('Attempt %d failed (%s); retrying in %ds' % (attempt, error, delay))
+                time.sleep(delay)
     digest = hashlib.sha256()
     with archive.open('rb') as data:
         for chunk in iter(lambda: data.read(1024 * 1024), b''):
