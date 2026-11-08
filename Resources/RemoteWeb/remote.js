@@ -24,7 +24,7 @@ async function api(path,body){
  const response=await fetch(path,{method:body===undefined?'GET':'POST',headers,body:body===undefined?undefined:JSON.stringify(body),credentials:'same-origin',cache:'no-store',signal:typeof AbortSignal.timeout==='function'?AbortSignal.timeout(8000):undefined});
  const result=await response.json();if(!response.ok){const detail=result.error||result.data?.error;const error=new Error(typeof detail==='string'?detail:detail?.message||('请求失败（'+response.status+'）'));error.status=response.status;throw error;}return result;
 }
-function setConnectionStatus(state){const labels={connected:'已连接',connecting:'正在连接',reconnecting:'正在重连',disconnected:'连接中断'};const panel=$('sidebar-connection');if(panel){panel.title=labels[state];panel.setAttribute('aria-label',labels[state]);panel.dataset.state=state;$('sidebar-connection-label').textContent=labels[state];$('sidebar-connection-detail').textContent=state==='connected'?location.host:state==='disconnected'?'检查网络或返回手机 Dylix':'正在与手机建立连接';}if($('editor-live-connection')){$('editor-live-connection').textContent=labels[state];$('editor-live-connection').dataset.state=state;}$('connection-state').textContent=labels[state];$('connection-state').dataset.state=state;}
+function setConnectionStatus(state){const labels={connected:(window.t?window.t('connected'):'已连接'),connecting:(window.t?window.t('connecting'):'正在连接'),reconnecting:(window.t?window.t('reconnecting'):'正在重连'),disconnected:(window.t?window.t('disconnected'):'连接中断')};const panel=$('sidebar-connection');if(panel){panel.title=labels[state];panel.setAttribute('aria-label',labels[state]);panel.dataset.state=state;$('sidebar-connection-label').textContent=labels[state];$('sidebar-connection-detail').textContent=state==='connected'?location.host:state==='disconnected'?(window.t?window.t('check_network_or_dylix'):'检查网络或返回手机 Dylix'):(window.t?window.t('connecting_to_phone'):'正在与手机建立连接');}if($('editor-live-connection')){$('editor-live-connection').textContent=labels[state];$('editor-live-connection').dataset.state=state;}$('connection-state').textContent=labels[state];$('connection-state').dataset.state=state;}
 function showPair(message){setEditorFullscreen(false);pauseAutoSave();autoSaveEnabled=false;autoSaveScope='';setConnectionStatus('disconnected');$('workspace').hidden=true;$('pair-page').hidden=false;if(message)$('pair-message').textContent=message;}
 function field(label,value){const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=String(value);row.append(dt,dd);return row;}
 function render(data){
@@ -33,17 +33,31 @@ function render(data){
 }
 async function refresh(){
  if(refreshing||document.hidden)return;refreshing=true;if(snapshot&&$('sidebar-connection')?.dataset.state==='disconnected')setConnectionStatus('reconnecting');
- try{const result=await api('/api/v1/status');csrf=result.session.csrf;window.remotePermission=result.session.permission;render(result.data);if(window.remotePermission==='workspace'&&!window.projectsLoaded){window.projectsLoaded=true;loadProjects().catch(showError);}const events=await api('/api/v1/events');$('events').replaceChildren(...events.data.slice(-8).reverse().map(e=>{const li=document.createElement('li'),time=document.createElement('time'),text=document.createElement('span');time.textContent=new Date(e.timestamp*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});text.textContent=eventNames[e.event]||e.event;li.append(time,text);return li;}));}
+ try{const result=await api('/api/v1/status');csrf=result.session.csrf;window.remotePermission=result.session.permission;render(result.data);if(window.remotePermission==='workspace'&&!window.projectsLoaded){window.projectsLoaded=true;loadProjects().catch(showError);}const events=await api('/api/v1/events');$('events').replaceChildren(...events.data.slice(-8).reverse().map(e=>{const li=document.createElement('li'),time=document.createElement('time'),text=document.createElement('span');time.textContent=new Date(e.timestamp*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false});text.textContent=(window.t?window.t('evt_'+e.event):null)||eventNames[e.event]||e.event;li.append(time,text);return li;}));}
  catch(e){if(e.status===401){csrf='';showPair('请重新配对，或在手机上检查设备授权。');}else if(snapshot){setConnectionStatus('disconnected');$('workspace-message').textContent='暂时失去连接。请检查手机后台状态；若已被系统挂起，返回 Dylix 即可恢复连接。';}else if(e.status!==401){$('public-state').textContent='服务连接中断';}}
  finally{refreshing=false;}
 }
+function getModuleLabel(id){ return (window.t ? window.t('mod_' + id) : null) || modules.find(m=>m[0]===id)?.[1] || id; }
+function getModuleDesc(id){ return (window.t ? window.t('mod_' + id + '_desc') : null) || modules.find(m=>m[0]===id)?.[4] || ''; }
+function renderNavigation(){
+ $('navigation').replaceChildren();
+ for(const [id,,phase,path] of modules){
+  const label=getModuleLabel(id);
+  const button=document.createElement('button');
+  button.className='nav-button';button.dataset.id=id;button.type='button';button.title=label;button.setAttribute('aria-label',label);
+  button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg><span>'+label+'</span>';
+  button.addEventListener('click',()=>selectModule(id));
+  $('navigation').append(button);
+ }
+}
 function selectModule(id){
  document.body.classList.toggle('editor-page',id==='editor');selected=id;const module=modules.find(m=>m[0]===id);for(const button of document.querySelectorAll('.nav-button'))button.setAttribute('aria-current',button.dataset.id===id?'page':'false');
- $('breadcrumb').textContent=module[1];$('overview').hidden=id!=='overview';$('module-info').hidden=id==='overview';$('page-title').textContent=id==='overview'?'你的本机工作台。':module[1];$('page-description').textContent=id==='overview'?'来自设备的实时状态，执行与数据始终留在手机。':id==='settings'?'当前连接的权限与访问说明。':module[4];
- /*$('module-phase').textContent=id==='settings'?'连接与权限 / 当前阶段':'阶段 '+module[2]+' / 待接入';$('module-title').textContent=id==='settings'?'由手机掌握访问权。':module[1]+'，接下来接通。';$('module-description').textContent=module[4];document.querySelector('.implementation-note').hidden=id==='settings';*/
+ const label=getModuleLabel(id);
+ const desc=getModuleDesc(id);
+ $('breadcrumb').textContent=label;$('overview').hidden=id!=='overview';$('module-info').hidden=id==='overview';$('page-title').textContent=id==='overview'?(window.t?window.t('your_local_workspace'):'你的本机工作台。'):label;$('page-description').textContent=id==='overview'?(window.t?window.t('realtime_status_desc'):'来自设备的实时状态，执行与数据始终留在手机。'):id==='settings'?'当前连接的权限与访问说明。':desc;
  if(id!=='overview')renderModule(id);
 }
-for(const [id,label,phase,path] of modules){const button=document.createElement('button');button.className='nav-button';button.dataset.id=id;button.type='button';button.title=label;button.setAttribute('aria-label',label);button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg><span>'+label+'</span>';button.addEventListener('click',()=>selectModule(id));$('navigation').append(button);}
+renderNavigation();
 selectModule('overview');
 $('pair-form').addEventListener('submit',async e=>{
  e.preventDefault();const generation=++pairGeneration;$('pair-submit').disabled=true;$('pair-message').textContent='正在验证授权码…';
@@ -322,3 +336,27 @@ function renderBinary(){
 async function renderTasks(){const r=await run('tasks',{}, {quiet:true,projectID:''});$('module-body').replaceChildren();for(const task of [...(r.tasks||[])].sort((a,b)=>b.startedAt-a.startedAt)){const row=node('div',undefined,'task-row');row.append(node('span',task.action+' · '+task.state+' · '+new Date(task.startedAt*1000).toLocaleString()),button('查看',()=>{showJob(task);output(task);}));if(['running','awaiting_confirmation'].includes(task.state))row.append(button('请求取消',async()=>{const result=await api('/api/v1/jobs/cancel',{id:task.id});showJob(result.data);renderTasks();}));$('module-body').append(row);}}
 window.addEventListener('beforeunload',e=>{if([...tabs.values()].some(t=>t.dirty)){e.preventDefault();e.returnValue='';}});
 $('theme-toggle').addEventListener('click',()=>{if(window.monaco)monaco.editor.setTheme(editorTheme());});
+
+function initLanguageSelects() {
+ const currentLang = window.i18n ? window.i18n.lang : 'vi';
+ for (const selId of ['pair-lang-select', 'lang-select']) {
+  const sel = $(selId);
+  if (sel) {
+   sel.value = currentLang;
+   sel.addEventListener('change', e => {
+    if (window.i18n) window.i18n.setLang(e.target.value);
+    if ($('pair-lang-select')) $('pair-lang-select').value = e.target.value;
+    if ($('lang-select')) $('lang-select').value = e.target.value;
+   });
+  }
+ }
+}
+window.onDylixLanguageChange = function() {
+ renderNavigation();
+ selectModule(selected);
+ if (snapshot) render(snapshot);
+};
+if (window.i18n) {
+ window.i18n.updateDOM();
+ initLanguageSelects();
+}

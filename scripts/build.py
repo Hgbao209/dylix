@@ -24,7 +24,7 @@ platform = 'simulator' if args.simulator else 'device'
 sdk = 'iphonesimulator' if args.simulator else 'iphoneos'
 arch = 'x86_64' if args.simulator else 'arm64'
 installed_sdk = pathlib.Path(subprocess.check_output(['xcrun', '--sdk', sdk, '--show-sdk-path'], text=True).strip())
-bundled_sdk = pathlib.Path(os.environ.get('DYLIX_SDK_26_0', str(ROOT.parent / 'SDKDownloads/iOS-SDKs-26/iPhoneOS26.0.sdk')))
+bundled_sdk = pathlib.Path(os.environ.get('DYLIX_SDK_26_0', str(ROOT / 'LocalSDKs/iPhoneOS26.0.sdk')))
 try:
     actual_sdk, sdk_settings = select_sdk(sdk, installed_sdk, bundled_sdk, args.sdk_root)
 except ValueError as error:
@@ -60,7 +60,7 @@ commands = {name: [f'{framework}.framework/{framework}', 'main', '', 'no']
 # Keep the complete SDK losslessly compressed, and materialize it in app caches.
 for sdk_version, sdk_root, sdk_stem in [
     ('16.4', ROOT / 'Resources/SDK', 'SDK'),
-    ('26.0', pathlib.Path(os.environ.get('DYLIX_SDK_26_0', str(ROOT.parent / 'SDKDownloads/iOS-SDKs-26/iPhoneOS26.0.sdk'))), 'SDK26'),
+    ('26.0', pathlib.Path(os.environ.get('DYLIX_SDK_26_0', str(ROOT / 'LocalSDKs/iPhoneOS26.0.sdk'))), 'SDK26'),
 ]:
     metadata = plistlib.loads((sdk_root / 'SDKSettings.plist').read_bytes())
     if metadata.get('Version') != sdk_version:
@@ -82,7 +82,7 @@ resource_headers = ROOT / 'Resources/ClangInclude'
 shutil.copytree(resource_headers, app / 'ClangInclude', dirs_exist_ok=True)
 perl_config = (ROOT / 'Resources/Perl/Config.pm').read_text()
 assert '$^V eq 5.34.0' in perl_config and "dlsrc => 'dl_none.xs'" in perl_config, 'Expected iOS Perl 5.34.0 modules'
-resources = ['CompatibilityRules', 'ThirdPartyNotices', 'GitHelp', 'HelpArticles', 'Editor', 'GitDiff', 'RemoteWeb', 'Personas', 'AIProviders', 'AgentSkills', 'logos', 'Include', 'Perl', 'SampleProject', 'SampleObjectiveC', 'SampleMultiProject', 'FLEXProject', 'VendorFrameworks']
+resources = ['vi.lproj', 'en.lproj', 'zh-Hans.lproj', 'CompatibilityRules', 'ThirdPartyNotices', 'GitHelp', 'HelpArticles', 'Editor', 'GitDiff', 'RemoteWeb', 'Personas', 'AIProviders', 'AgentSkills', 'logos', 'Include', 'Perl', 'SampleProject', 'SampleObjectiveC', 'SampleMultiProject', 'FLEXProject', 'VendorFrameworks']
 if args.simulator:
     resources.append('SampleLogosGenerated')
     resources.append('SampleMultiObjectiveC')
@@ -109,7 +109,7 @@ for asset in (app / 'RemoteWeb' / 'monaco').rglob('*'):
 info = {
     'CFBundleExecutable': 'TheosMobileCompiler', 'CFBundleIdentifier': 'com.xuegao.theosmobilecompiler',
     'CFBundleName': 'Dylix', 'CFBundleDisplayName': 'Dylix',
-    'CFBundleDevelopmentRegion': 'zh-Hans', 'CFBundleLocalizations': ['zh-Hans', 'en'],
+    'CFBundleDevelopmentRegion': 'zh-Hans', 'CFBundleLocalizations': ['zh-Hans', 'en', 'vi'],
     'NSCameraUsageDescription': '拍摄照片作为您选择发送给模型的参考附件。', 'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': '1.1.0', 'CFBundleVersion': '211',
     'CFBundleDocumentTypes': [{'CFBundleTypeName':'Dylix Files','CFBundleTypeRole':'Editor','LSHandlerRank':'Alternate','LSItemContentTypes':['public.data','public.archive','public.source-code']}],
     'CFBundleURLTypes': [{'CFBundleURLName':'Dylix Incoming','CFBundleURLSchemes':['dylix', 'tweakforge']}],
@@ -163,7 +163,7 @@ cmd = ['xcrun', '--sdk', sdk, 'clang', '-arch', arch, '-isysroot', sysroot,
        '-fobjc-arc', '-fmodules', '-framework', 'Network', '-framework', 'CoreImage', '-I' + str(ROOT / 'Vendor/libgit2/include'), '-weak_framework', 'BackgroundTasks', '-framework', 'AVFoundation', '-framework', 'UserNotifications', '-framework', 'AuthenticationServices', '-framework', 'Security', '-framework', 'CoreFoundation', '-liconv', '-framework', 'UIKit', '-framework', 'CoreGraphics', '-framework', 'QuartzCore', '-framework', 'Foundation', '-framework', 'UniformTypeIdentifiers', '-framework', 'WebKit', '-framework', 'JavaScriptCore', '-larchive',
        '-F' + str(frameworks), '-framework', 'ios_system',
        '-Wl,-needed_framework,libLLVM',
-       '-Wl,-rpath,@executable_path/Frameworks', str(ROOT / 'App/main.m'), str(ROOT / 'App/RuntimeDiagnostics.m'), str(ROOT / 'App/ArchiveImport.m'), str(ROOT / 'App/TheosMakefile.m'), str(ROOT / 'App/DebPackage.m'), str(ROOT / 'App/OutputNaming.m'), str(ROOT / 'App/CompatibilityRepair.m'), str(ROOT / 'App/Studio.m'), str(ROOT / 'App/StorageSpace.m'), str(ROOT / 'App/ProjectSafety.m'), str(ROOT / 'App/ProjectTrash.m'), str(ROOT / 'App/GlassSupport.m'), str(ROOT / 'App/GitService.m'), str(ROOT / 'App/GitUI.m'), str(ROOT / 'App/GitHubRepositories.m'), str(ROOT / 'App/GitPATGuide.m'), str(ROOT / 'App/LinkSupport.m'), str(ROOT / 'App/HelpArticle.m'), str(ROOT / 'App/GitAutomation.m'), str(ROOT / 'App/GitDiffView.m'), str(gitlib), str(ROOT / 'Vendor/MBProgressHUD/MBProgressHUD.m'), '-o', str(app / 'TheosMobileCompiler')]
+       '-Wl,-rpath,@executable_path/Frameworks', str(ROOT / 'App/main.m'), str(ROOT / 'App/RuntimeDiagnostics.m'), str(ROOT / 'App/ArchiveImport.m'), str(ROOT / 'App/TheosMakefile.m'), str(ROOT / 'App/DebPackage.m'), str(ROOT / 'App/OutputNaming.m'), str(ROOT / 'App/CompatibilityRepair.m'), str(ROOT / 'App/DylixI18n.m'), str(ROOT / 'App/Studio.m'), str(ROOT / 'App/StorageSpace.m'), str(ROOT / 'App/ProjectSafety.m'), str(ROOT / 'App/ProjectTrash.m'), str(ROOT / 'App/GlassSupport.m'), str(ROOT / 'App/GitService.m'), str(ROOT / 'App/GitUI.m'), str(ROOT / 'App/GitHubRepositories.m'), str(ROOT / 'App/GitPATGuide.m'), str(ROOT / 'App/LinkSupport.m'), str(ROOT / 'App/HelpArticle.m'), str(ROOT / 'App/GitAutomation.m'), str(ROOT / 'App/GitDiffView.m'), str(gitlib), str(ROOT / 'Vendor/MBProgressHUD/MBProgressHUD.m'), '-o', str(app / 'TheosMobileCompiler')]
 cmd.extend(str(p) for p in sorted((ROOT / 'App/AI').rglob('*.m')))
 if args.simulator:
     for regression in ['Integration165IOSRegression.m', 'AgentIOSRegression.m', 'ToolRegistryIOSRegression.m']:

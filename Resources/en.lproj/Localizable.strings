@@ -1,0 +1,120 @@
+/* English Localization for Dylix */
+
+/* Tabs & Navigation */
+"项目" = "Projects";
+"AI 会话" = "AI Chat";
+"设置" = "Settings";
+"总览" = "Overview";
+"工程操作" = "Project Actions";
+
+/* File & Project Actions */
+"新建文件" = "New File";
+"重命名当前文件" = "Rename Current File";
+"项目设置" = "Project Settings";
+"构建诊断" = "Build Diagnostics";
+"查找与替换" = "Find & Replace";
+"分享当前源码" = "Share Source Code";
+"分享构建结果" = "Share Build Results";
+"AI 开发助手" = "AI Assistant";
+"源代码管理 Git" = "Git Source Control";
+"取消" = "Cancel";
+"确定" = "OK";
+"确认" = "Confirm";
+"编辑" = "Edit";
+"删除" = "Delete";
+"保存" = "Save";
+"刷新" = "Refresh";
+"复制" = "Copy";
+"完成" = "Done";
+"关闭" = "Close";
+"返回" = "Back";
+
+/* Build & Results */
+"正在构建" = "Building...";
+"构建结果" = "Build Results";
+"构建通过 · 运行待验证" = "Build Succeeded · Untested";
+"构建失败，请查看日志和报告" = "Build Failed, check logs and report";
+"暂无构建结果" = "No Build Results";
+"本次构建" = "Current Build";
+"产物与构建记录" = "Artifacts & Logs";
+"开始时间" = "Start Time";
+"完成时间" = "Finish Time";
+"构建耗时" = "Build Duration";
+"文件合计" = "Total Files";
+"方案 / 优化" = "Profile / Optimization";
+"编译器 / SDK" = "Compiler / SDK";
+"状态" = "Status";
+
+/* Settings Sections */
+"源代码管理" = "Source Control";
+"AI" = "AI";
+"远程开发" = "Remote Development";
+"工具" = "Tools";
+"外观与编辑器" = "Appearance & Editor";
+"构建与产物" = "Build & Artifacts";
+"工具链与本机" = "Toolchain & Device";
+"关于" = "About";
+
+/* Settings Items */
+"局域网远程" = "LAN Remote";
+"Dylix Remote · 浏览器工作台" = "Dylix Remote · Web Workspace";
+"项目开源地址" = "Open Source Repository";
+"软件许可证" = "Software License";
+"人设" = "Persona";
+"界面外观" = "Appearance";
+"代码字号" = "Code Font Size";
+"自动保存" = "Auto Save";
+"语言" = "Language";
+"跟随系统" = "Follow System";
+"石墨深色" = "Graphite Dark";
+"纸感浅色" = "Paper Light";
+"始终开启" = "Always On";
+"优化方案" = "Optimization Scheme";
+"目标架构" = "Target Architecture";
+"默认构建设置" = "Default Build Settings";
+"存储空间" = "Storage Space";
+"IPA 头文件导出" = "IPA Header Export";
+"离线崩溃分析" = "Offline Crash Analysis";
+"关于 Dylix" = "About Dylix";
+"版本" = "Version";
+"作者" = "Author";
+"本机工具链" = "Local Toolchain";
+"功能与使用" = "Features & Usage";
+"诊断与适配" = "Diagnostics & Compatibility";
+"开源组件与许可证" = "Open Source Components";
+"软件功能说明" = "Software Features";
+"编译与使用说明" = "Build & Usage Guide";
+"隐私与本地存储" = "Privacy & Local Storage";
+"编译诊断与兼容适配规则库" = "Diagnostics & Rules Catalog";
+"适配前后诊断记录" = "Repair History";
+"导入 .ips / 符号档案" = "Import .ips / Symbols";
+"选择偏好" = "Preferences";
+
+/* Optimization & Build Options */
+"跟随全局" = "Follow Global";
+"默认均衡 · -O2" = "Default Balanced · -O2";
+"体积优先 · -Os" = "Size First · -Os";
+"调试排错 · -O0" = "Debug · -O0";
+"基础优化 · -O1" = "Basic · -O1";
+"激进优化 · -O3" = "Aggressive · -O3";
+"极限体积 · -Oz" = "Minimum Size · -Oz";
+"自动裁剪 · 推荐" = "Auto Strip · Recommended";
+"保留完整符号" = "Keep Full Symbols";
+"常用方案" = "Common Presets";
+"符号处理" = "Symbol Policy";
+"高级选项" = "Advanced Options";
+"配置来源" = "Config Source";
+
+/* Git & Remote */
+"暂存" = "Stage";
+"提交" = "Commit";
+"推送" = "Push";
+"拉取" = "Pull";
+"分支" = "Branch";
+"历史记录" = "History";
+"差异" = "Diff";
+"放弃更改" = "Discard Changes";
+"身份 · 服务账号 · 自动存档" = "Identity · Accounts · Auto Save";
+"已连接" = "Connected";
+"正在连接" = "Connecting...";
+"连接中断" = "Disconnected";

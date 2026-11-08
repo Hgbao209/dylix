@@ -1,0 +1,4 @@
+/* Bundle Display Name in Vietnamese */
+"CFBundleDisplayName" = "Dylix";
+"CFBundleName" = "Dylix";
+"NSCameraUsageDescription" = "Chụp ảnh làm tệp đính kèm gửi tới mô hình AI.";

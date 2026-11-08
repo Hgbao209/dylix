@@ -1,0 +1,4 @@
+/* Bundle Display Name in Simplified Chinese */
+"CFBundleDisplayName" = "Dylix";
+"CFBundleName" = "Dylix";
+"NSCameraUsageDescription" = "拍摄照片作为您选择发送给模型的参考附件。";

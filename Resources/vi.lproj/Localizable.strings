@@ -1,0 +1,120 @@
+/* Vietnamese Localization for Dylix */
+
+/* Tabs & Navigation */
+"项目" = "Dự án";
+"AI 会话" = "Trò chuyện AI";
+"设置" = "Cài đặt";
+"总览" = "Tổng quan";
+"工程操作" = "Thao tác dự án";
+
+/* File & Project Actions */
+"新建文件" = "Tạo tệp mới";
+"重命名当前文件" = "Đổi tên tệp hiện tại";
+"项目设置" = "Cài đặt dự án";
+"构建诊断" = "Chẩn đoán bản dựng";
+"查找与替换" = "Tìm & Thay thế";
+"分享当前源码" = "Chia sẻ mã nguồn";
+"分享构建结果" = "Chia sẻ kết quả dựng";
+"AI 开发助手" = "Trợ lý AI";
+"源代码管理 Git" = "Quản lý mã nguồn Git";
+"取消" = "Hủy";
+"确定" = "Đồng ý";
+"确认" = "Xác nhận";
+"编辑" = "Chỉnh sửa";
+"删除" = "Xóa";
+"保存" = "Lưu";
+"刷新" = "Làm mới";
+"复制" = "Sao chép";
+"完成" = "Hoàn tất";
+"关闭" = "Đóng";
+"返回" = "Quay lại";
+
+/* Build & Results */
+"正在构建" = "Đang xây dựng...";
+"构建结果" = "Kết quả xây dựng";
+"构建通过 · 运行待验证" = "Xây dựng thành công · Chờ kiểm tra";
+"构建失败，请查看日志和报告" = "Xây dựng thất bại, vui lòng kiểm tra nhật ký và báo cáo";
+"暂无构建结果" = "Chưa có kết quả dựng";
+"本次构建" = "Lần dựng này";
+"产物与构建记录" = "Sản phẩm và nhật ký dựng";
+"开始时间" = "Thời gian bắt đầu";
+"完成时间" = "Thời gian hoàn thành";
+"构建耗时" = "Thời gian dựng";
+"文件合计" = "Tổng số tệp";
+"方案 / 优化" = "Cấu hình / Tối ưu hóa";
+"编译器 / SDK" = "Trình biên dịch / SDK";
+"状态" = "Trạng thái";
+
+/* Settings Sections */
+"源代码管理" = "Quản lý mã nguồn";
+"AI" = "Trí tuệ nhân tạo (AI)";
+"远程开发" = "Phát triển từ xa";
+"工具" = "Công cụ";
+"外观与编辑器" = "Giao diện & Trình biên tập";
+"构建与产物" = "Bản dựng & Sản phẩm đầu ra";
+"工具链与本机" = "Chuỗi công cụ & Thiết bị";
+"关于" = "Giới thiệu";
+
+/* Settings Items */
+"局域网远程" = "Điều khiển qua LAN";
+"Dylix Remote · 浏览器工作台" = "Dylix Remote · Bàn làm việc trình duyệt";
+"项目开源地址" = "Kho mã nguồn mở";
+"软件许可证" = "Giấy phép phần mềm";
+"人设" = "Nhân vật / Persona";
+"界面外观" = "Giao diện";
+"代码字号" = "Cỡ chữ mã nguồn";
+"自动保存" = "Tự động lưu";
+"语言" = "Ngôn ngữ";
+"跟随系统" = "Theo hệ thống";
+"石墨深色" = "Tối than chì";
+"纸感浅色" = "Sáng giấy tự nhiên";
+"始终开启" = "Luôn bật";
+"优化方案" = "Phương án tối ưu hóa";
+"目标架构" = "Kiến trúc mục tiêu";
+"默认构建设置" = "Cài đặt dựng mặc định";
+"存储空间" = "Dung lượng lưu trữ";
+"IPA 头文件导出" = "Xuất Header IPA";
+"离线崩溃分析" = "Phân tích sự cố ngoại tuyến";
+"关于 Dylix" = "Về Dylix";
+"版本" = "Phiên bản";
+"作者" = "Tác giả";
+"本机工具链" = "Chuỗi công cụ trên máy";
+"功能与使用" = "Tính năng & Hướng dẫn";
+"诊断与适配" = "Chẩn đoán & Tương thích";
+"开源组件与许可证" = "Thành phần mã nguồn mở";
+"软件功能说明" = "Mô tả tính năng phần mềm";
+"编译与使用说明" = "Hướng dẫn biên dịch & sử dụng";
+"隐私与本地存储" = "Quyền riêng tư & Lưu trữ cục bộ";
+"编译诊断与兼容适配规则库" = "Quy tắc chẩn đoán & tương thích";
+"适配前后诊断记录" = "Lịch sử chẩn đoán trước/sau sửa lỗi";
+"导入 .ips / 符号档案" = "Nhập tệp .ips / Ký hiệu";
+"选择偏好" = "Chọn tùy chọn";
+
+/* Optimization & Build Options */
+"跟随全局" = "Theo cài đặt chung";
+"默认均衡 · -O2" = "Cân bằng mặc định · -O2";
+"体积优先 · -Os" = "Ưu tiên kích thước nhỏ · -Os";
+"调试排错 · -O0" = "Gỡ lỗi Debug · -O0";
+"基础优化 · -O1" = "Tối ưu hóa cơ bản · -O1";
+"激进优化 · -O3" = "Tối ưu hóa nâng cao · -O3";
+"极限体积 · -Oz" = "Kích thước tối thiểu · -Oz";
+"自动裁剪 · 推荐" = "Tự động cắt tỉa ký hiệu · Khuyên dùng";
+"保留完整符号" = "Giữ nguyên ký hiệu đầy đủ";
+"常用方案" = "Phương án phổ biến";
+"符号处理" = "Xử lý ký hiệu";
+"高级选项" = "Tùy chọn nâng cao";
+"配置来源" = "Nguồn cấu hình";
+
+/* Git & Remote */
+"暂存" = "Stage";
+"提交" = "Commit";
+"推送" = "Push";
+"拉取" = "Pull";
+"分支" = "Nhánh";
+"历史记录" = "Lịch sử";
+"差异" = "So sánh khác biệt (Diff)";
+"放弃更改" = "Hủy thay đổi";
+"身份 · 服务账号 · 自动存档" = "Định danh · Tài khoản · Tự động lưu";
+"已连接" = "Đã kết nối";
+"正在连接" = "Đang kết nối...";
+"连接中断" = "Mất kết nối";

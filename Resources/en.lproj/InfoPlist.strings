@@ -1,0 +1,4 @@
+/* Bundle Display Name in English */
+"CFBundleDisplayName" = "Dylix";
+"CFBundleName" = "Dylix";
+"NSCameraUsageDescription" = "Take photos to attach as reference when sending to AI.";
