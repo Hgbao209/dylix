@@ -7,12 +7,15 @@ int main(void){@autoreleasepool{
  NSDictionary *schema=@{@"name":@"classdump_headers",@"description":@"UNIQUE_TOOL_DESCRIPTION",@"parameters":@{@"type":@"object",@"required":@[@"job_id",@"action"],@"properties":@{@"action":@{@"type":@"string",@"enum":@[@"list",@"search",@"read"]},@"line_count":@{@"type":@"integer",@"maximum":@120}}}};
  NSArray *schemas=@[TFAIDevelopmentGuideSchema(),schema,@{@"name":@"web_read"}];
  NSString *a=TFAIDeveloperPrompt(ordinary,schemas);NSDictionary *snapshot=Snapshot(a);
- Check([snapshot[@"environment"] isEqual:ordinary],"environment preserved");Check([snapshot[@"availableTools"] isEqual:@[@"read_development_guide",@"classdump_headers",@"web_read"]],"only current tools advertised");Check([snapshot[@"promptVersion"] isEqual:@"3.1"],"versioned lean prompt");
+ Check([snapshot[@"environment"] isEqual:ordinary],"environment preserved");Check([snapshot[@"availableTools"] isEqual:@[@"read_development_guide",@"classdump_headers",@"web_read"]],"only current tools advertised");Check([snapshot[@"promptVersion"] isEqual:@"3.2"],"versioned lean prompt");
  Check(!snapshot[@"toolCatalog"]&&![a containsString:@"UNIQUE_TOOL_DESCRIPTION"]&&![a containsString:@"line_count"],"tool descriptions and parameters are not duplicated");
  Check([a containsString:@"未关联项目"]&&![a containsString:@"问答只读"],"ordinary scope is concise and accurate");
  NSString *ask=TFAIDeveloperPrompt(@{@"hasProject":@YES,@"mode":@"ask"},schemas);Check([ask containsString:@"问答只读"]&&![ask containsString:@"未关联项目"],"ask scope restricted");
  NSString *dev=TFAIDeveloperPrompt(@{@"hasProject":@YES,@"mode":@"develop"},schemas);Check(![dev containsString:@"问答只读"]&&![dev containsString:@"未关联项目"],"development scope does not invent restrictions");
  NSString *recovery=TFAIDeveloperPrompt(@{@"hasProject":@YES,@"mode":@"develop",@"recoveryReadOnly":@YES},schemas);Check([recovery containsString:@"中断后的只读核对"]&&[recovery containsString:@"不是恢复服务端流"],"recovery remains read-only review");
+ Check([dev containsString:@"必须把任务推进到代码修改"]&&[dev containsString:@"立即调用propose_patch或create_file"]&&[dev containsString:@"继续调用apply_approved_patch"],"explicit code-change requests continue through the edit workflow");
+ Check([dev containsString:@"不要只汇报发现"]&&[dev containsString:@"不要绕过apply_approved_patch和App批准"],"editing is required without bypassing approval");
+ Check([recovery containsString:@"只读核对"]&&[recovery containsString:@"不是恢复服务端流"],"read-only recovery remains outside the edit workflow");
  NSString *noTools=TFAIDeveloperPrompt(ordinary,@[]);Check(![noTools containsString:@"【按需指南】"]&&[noTools containsString:@"根据头文件写功能"],"no-tool connection retains header essentials without unusable guide instruction");
  NSDictionary *empty=Snapshot(TFAIDeveloperPrompt(nil,nil));Check([empty[@"environment"] count]==0&&[empty[@"availableTools"] count]==0,"empty context invents no access");NSDictionary *bad=Snapshot(TFAIDeveloperPrompt(nil,@[NSNull.null,@{@"name":NSNull.null},schema,schema]));Check([bad[@"availableTools"] count]==1,"malformed and duplicate schema names ignored");
  for(NSString *rule in @[@"schema",@"最小修改",@"proposal_id",@"不提升权限",@"缺少结果",@"不伪造",@"进程终止",@"核心技能：根据头文件写功能",@"完整selector",@"声明存在不证明",@"观察版",@"原方法契约"]){Check([a containsString:rule],rule.UTF8String);}
